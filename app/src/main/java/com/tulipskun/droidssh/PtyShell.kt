@@ -36,7 +36,12 @@ class PtyShellFactory(private val app: Context) : ShellFactory {
             Log.w(TAG, "native pty missing, piped fallback")
             return pipedFallback(prefs.rootMode, channel)
         }
-        return PtyCommand(ctx, user, prefs.rootMode)
+        val wantRoot = prefs.rootMode
+        val useRoot = wantRoot && ShellEnv.suAvailable()
+        if (wantRoot && !useRoot) {
+            Log.w(TAG, "root mode ON แต่เรียก su ไม่ได้ (ยังไม่ grant ใน KernelSU?) — ใช้ app shell ไปก่อน")
+        }
+        return PtyCommand(ctx, user, useRoot)
     }
 
     private fun pipedFallback(rootMode: Boolean, channel: ChannelSession): Command {
@@ -105,9 +110,16 @@ private class PtyCommand(
     private fun run() {
         var code = 1
         try {
-            val shellBin = if (rootMode) "su"
-                else if (File("/system/bin/sh").canExecute()) "/system/bin/sh" else "sh"
-            val argv = if (rootMode) arrayOf(shellBin) else arrayOf(shellBin, "-i")
+            val suBin = "/system/bin/su"
+            val shBin = if (File("/system/bin/sh").canExecute()) "/system/bin/sh" else "sh"
+            val suOk = rootMode && try {
+                File(suBin).canExecute()
+            } catch (_: Exception) {
+                false
+            }
+            // absolute path หมด (ไม่พึ่ง PATH) + log argv ไว้ไล่บั๊ก
+            val argv = if (suOk) arrayOf(suBin) else arrayOf(shBin, "-i")
+            Log.i(TAG, "pty fork argv=${argv.toList()} user=$username rootMode=$rootMode")
             val home = ShellEnv.homeDir(ctx)
             val envp = ShellEnv.build(ctx, username, term0, emptyMap())
             val pidOut = intArrayOf(-1)
@@ -170,6 +182,7 @@ private class PtyCommand(
     override fun destroy(channel: ChannelSession) {
         try {
             val pid = childPid
+            Log.i(TAG, "destroy pid=$pid")
             if (pid > 0) PtyNative.ptyKill(pid, 9)
         } catch (_: Exception) {
         }

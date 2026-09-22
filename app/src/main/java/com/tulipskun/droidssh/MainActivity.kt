@@ -150,7 +150,11 @@ class MainActivity : AppCompatActivity() {
     private fun refreshStatus() {
         val running = SshServerManager.isRunning
         val port = if (running) SshServerManager.runningPort else prefs.effectivePort()
-        val mode = if (prefs.rootMode) "root (:22)" else "non-root (:2222)"
+        val mode = if (prefs.rootMode) {
+            if (ShellEnv.suAvailable()) "root (:22, su พร้อม)" else "root (:22, รอ grant ใน KernelSU)"
+        } else {
+            "non-root (:2222)"
+        }
         val user = prefs.username.ifBlank { "droid" }
         val ips = NetUtils.getDeviceIps(this).take(3)
         val ipLine = if (ips.isEmpty()) "<ต่อ Wi-Fi ก่อน>" else ips.joinToString(" · ")

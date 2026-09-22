@@ -13,8 +13,15 @@ import java.nio.file.Files
 object ShellEnv {
     const val RC_NAME = ".droidrc"
 
-    fun homeDir(context: Context): File {
-        val raw = File(context.applicationContext.filesDir, "home").apply { mkdirs() }
+    /** su ใช้ได้จริงไหม (KernelSU ซ่อน su จากแอปที่ยังไม่ได้รับ grant -> canExecute=false) */
+    fun suAvailable(): Boolean =
+        try {
+            File("/system/bin/su").canExecute()
+        } catch (_: Exception) {
+            false
+        }
+
+    fun homeDir(context: Context): File {        val raw = File(context.applicationContext.filesDir, "home").apply { mkdirs() }
         // FIX: filesDir มาในรูป /data/user/0/... ซึ่งมี symlink component
         // sshd ตรวจ "parent ต้องไม่มี symlink" ตอนลบไฟล์ (checkSymlinkState) ->
         // rm ด้วย relative path ล้มทั้งที่ไฟล์มีอยู่จริง

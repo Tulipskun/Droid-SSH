@@ -21,10 +21,6 @@ class ExecCommandFactory(
     private val app: Context,
     private val rootMode: Boolean,
 ) : CommandFactory {
-    private val shellBin: String =
-        if (rootMode) "su"
-        else if (java.io.File("/system/bin/sh").canExecute()) "/system/bin/sh"
-        else "sh"
 
     override fun createCommand(channel: ChannelSession, command: String): Command {
         var user = "droid"
@@ -33,7 +29,14 @@ class ExecCommandFactory(
             if (s is ServerSession) user = s.username ?: "droid"
         } catch (_: Exception) {
         }
-        return ExecCommand(app.applicationContext, shellBin, command, user)
+        val useSu = rootMode && ShellEnv.suAvailable()
+        if (rootMode && !useSu) {
+            Log.w(TAG, "root mode ON แต่เรียก su ไม่ได้ — exec รันเป็น app user")
+        }
+        val bin = if (useSu) "su"
+            else if (java.io.File("/system/bin/sh").canExecute()) "/system/bin/sh"
+            else "sh"
+        return ExecCommand(app.applicationContext, bin, command, user)
     }
 }
 

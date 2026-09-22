@@ -111,6 +111,8 @@ Java_com_tulipskun_droidssh_PtyNative_forkPty(JNIEnv *env, jclass cls,
             }
         }
         if (cwd && cwd[0]) chdir(cwd);
+        // hygiene: อย่าให้ shell ลูกถือ socket ของ server ค้าง (leak + bind ค้าง)
+        for (int fd = 3; fd < 1024; fd++) close(fd);
         execvp(argv[0], argv);
         _exit(127);
     }
