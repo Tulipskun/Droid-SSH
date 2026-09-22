@@ -8,7 +8,6 @@ import org.apache.sshd.server.auth.password.PasswordAuthenticator
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider
 import org.apache.sshd.server.session.ServerSession
-import org.apache.sshd.server.shell.ProcessShellFactory
 import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import java.io.File
 import java.net.BindException
@@ -130,19 +129,9 @@ object SshServerManager {
             isKeyAuthorized(context, prefs, key)
         }
 
-        // Shell: root -> su, non-root -> sh
-        val shellCmd: Array<String> = if (prefs.rootMode) {
-            arrayOf("su", "-c", "sh -i")
-        } else {
-            // บางรอมมีแค่ /system/bin/sh บางรอมมี sh ใน PATH
-            if (File("/system/bin/sh").canExecute()) arrayOf("/system/bin/sh", "-i")
-            else arrayOf("sh", "-i")
-        }
-        // ProcessShellFactory(String rawCommand, List<String> argv):
-        // บน Unix ตัวที่รันจริงคือ elements ทั้งหมด (raw ใช้เฉพาะ Windows)
-        // เคยส่ง ("sh", ["-i"]) -> รันแค่ "-i" -> "No such file" (shell เด้ง, exec ไม่เกี่ยว)
-        val shellFactory = ProcessShellFactory(shellCmd.joinToString(" "), shellCmd.toList())
-        server.shellFactory = shellFactory
+        // Shell ผ่าน PTY จริง (มี tty -> ไม่มี warning, job control/vim ใช้ได้)
+        // workspace แบบ Termux (HOME/env/.droidrc) อยู่ใน PtyShellFactory/ShellEnv
+        server.shellFactory = PtyShellFactory(app)
         // one-shot `ssh user@host "cmd"` -> sh -c / su -c
         server.commandFactory = ExecCommandFactory(prefs.rootMode)
 

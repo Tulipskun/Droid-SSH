@@ -33,11 +33,13 @@ jobs:
           path: |
             ${{ env.ANDROID_HOME }}/platforms/android-35
             ${{ env.ANDROID_HOME }}/build-tools/35.0.0
-          key: android-sdk-35-buildtools-35.0.0
+            ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
+            ${{ env.ANDROID_HOME }}/cmake/3.22.1
+          key: android-sdk-35-buildtools-35.0.0-ndk-27.3-cmake-3.22.1
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.3.13750724" "cmake;3.22.1"
 
       - name: Prepare stable signing key
         run: |
@@ -77,6 +79,10 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs Droid-SSH.apk | grep -i "SHA-256"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs Droid-SSH.apk | grep -qi "CN=Droid-SSH"
+
+      - name: Verify native PTY lib bundled
+        run: |
+          unzip -l Droid-SSH.apk | grep "libdroidssh_pty.so"
 
       - name: Verify APK 16 KB alignment
         run: |
