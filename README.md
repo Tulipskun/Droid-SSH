@@ -4,6 +4,7 @@
 
 - Shell + one-shot exec (`ssh user@host "cmd"`) + SFTP (Apache MINA SSHD)
 - Login: password (เก็บเป็น SHA-256+salt) + public key (`authorized_keys`: ssh-rsa/ecdsa/ed25519) พร้อมกัน
+- SFTP เปิดมาอยู่ home (`~/`) แบบ Termux, absolute path ยังเห็นทั้งเครื่อง, มี `~/storage` -> /sdcard
 - Port: **22** (root mode, shell ผ่าน `su`) / **2222** (non-root) + fallback อัตโนมัติถ้า bind ไม่ได้
 - Auto startup: `BOOT_COMPLETED / MY_PACKAGE_REPLACED / QUICKBOOT` + `directBootAware`
 - Keep alive: ForegroundService (`START_STICKY`) + notification, WifiLock/WakeLock, WorkManager 15 นาที, restart เมื่อ swipe ทิ้ง

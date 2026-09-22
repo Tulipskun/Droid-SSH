@@ -100,6 +100,8 @@ dependencies {
     implementation("org.apache.sshd:sshd-common:2.12.0")
     implementation("org.apache.sshd:sshd-core:2.12.0")
     implementation("org.apache.sshd:sshd-sftp:2.12.0")
+    // Ed25519 (sshd ใช้ผ่าน EdDSASecurityProviderRegistrar ถ้ามีคลาสนี้ใน classpath)
+    implementation("net.i2p.crypto:eddsa:0.3.0")
     implementation("org.slf4j:slf4j-api:2.0.9")
     implementation("org.slf4j:slf4j-simple:2.0.9")
 }

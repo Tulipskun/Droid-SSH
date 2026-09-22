@@ -6,8 +6,11 @@ import org.apache.sshd.common.util.OsUtils
 import org.apache.sshd.server.SshServer
 import org.apache.sshd.server.auth.password.PasswordAuthenticator
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator
+import org.apache.sshd.server.channel.ChannelSession
+import org.apache.sshd.server.command.Command
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider
 import org.apache.sshd.server.session.ServerSession
+import org.apache.sshd.server.subsystem.SubsystemFactory
 import org.apache.sshd.sftp.server.SftpSubsystemFactory
 import java.io.File
 import java.net.BindException
@@ -135,7 +138,15 @@ object SshServerManager {
         // one-shot `ssh user@host "cmd"` -> sh -c / su -c
         server.commandFactory = ExecCommandFactory(prefs.rootMode)
 
-        server.subsystemFactories = listOf(SftpSubsystemFactory())
+        // SFTP เริ่มที่ home (bare ls/put/get ใช้ได้) แต่ absolute path ยังเห็นทั้งเครื่อง
+        val sftpBase = SftpSubsystemFactory()
+        val sftpHome = ShellEnv.homeDir(app).toPath()
+        val sftpFactory = object : SubsystemFactory {
+            override fun getName(): String = SftpSubsystemFactory.NAME
+            override fun createSubsystem(channel: ChannelSession): Command =
+                HomeSftpSubsystem(channel, sftpBase, sftpHome)
+        }
+        server.subsystemFactories = listOf(sftpFactory)
 
         return server
     }

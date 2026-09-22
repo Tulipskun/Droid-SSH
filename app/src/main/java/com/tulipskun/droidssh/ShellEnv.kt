@@ -3,6 +3,7 @@ package com.tulipskun.droidssh
 import android.content.Context
 import android.util.Log
 import java.io.File
+import java.nio.file.Files
 
 /**
  * Workspace แบบ Termux: HOME ของตัวเอง + env ครบ + rc เริ่มต้น
@@ -39,7 +40,20 @@ object ShellEnv {
             }
         }
         ensureRc(home)
+        ensureStorageLink(home)
         return env.map { (k, v) -> "$k=$v" }.toTypedArray()
+    }
+
+    /** ~/storage -> /sdcard แบบ Termux (best-effort: เข้าถึงได้จริงเมื่อแอปได้สิทธิ์ไฟล์) */
+    private fun ensureStorageLink(home: File) {
+        try {
+            val sdcard = File("/sdcard")
+            if (!sdcard.exists()) return
+            val link = File(home, "storage")
+            if (link.exists() || Files.isSymbolicLink(link.toPath())) return
+            Files.createSymbolicLink(link.toPath(), sdcard.toPath())
+        } catch (_: Exception) {
+        }
     }
 
     private fun ensureRc(home: File) {
