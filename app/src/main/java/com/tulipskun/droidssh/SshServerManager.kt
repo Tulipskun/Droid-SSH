@@ -140,7 +140,7 @@ object SshServerManager {
 
         // SFTP เริ่มที่ home (bare ls/put/get ใช้ได้) แต่ absolute path ยังเห็นทั้งเครื่อง
         val sftpBase = SftpSubsystemFactory()
-        val sftpHome = ShellEnv.homeDir(app).toPath()
+        val sftpHome = ShellEnv.homeDir(context).toPath()
         val sftpFactory = object : SubsystemFactory {
             override fun getName(): String = SftpSubsystemFactory.NAME
             override fun createSubsystem(channel: ChannelSession): Command =
