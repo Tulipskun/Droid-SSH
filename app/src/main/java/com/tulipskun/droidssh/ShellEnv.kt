@@ -90,6 +90,6 @@ HOSTNAME=${'$'}(hostname 2>/dev/null || echo android)
 PS1='${'$'}USER@${'$'}HOSTNAME:${'$'}PWD ${'$'} '
 alias ll='ls -l'
 alias la='ls -la'
-echo "Droid-SSH · user=${'$'}USER home=${'$'}HOME · 'exit' to disconnect"
+echo "Droid-SSH พร้อมใช้ · user=${'$'}USER home=${'$'}HOME · พิมพ์ exit เพื่อออก"
 """
 }

@@ -48,15 +48,15 @@ class SshService : Service() {
             try {
                 val port = SshServerManager.start(this)
                 Prefs(this).recordStartSuccess()
-                updateNotification("SSH รันอยู่ :$port")
+                updateNotification("SSH ทำงานอยู่ (พอร์ต $port)")
             } catch (t: Throwable) {
                 val fails = Prefs(this).recordStartFailure()
                 Log.e(TAG, "start failed", t)
                 if (Prefs(this).startBackoffActive()) {
-                    updateNotification("หยุดชั่วคราว (ล้มเหลว $fails ครั้งติดกัน) — กดเปิด SSH ใหม่เพื่อลองอีกครั้ง")
+                    updateNotification("พักการเปิดอัตโนมัติ (ล้มเหลว $fails ครั้งติดกัน) — กด “เปิด SSH” เพื่อลองใหม่")
                     stopSelf()
                 } else {
-                    updateNotification("เปิดไม่สำเร็จ: ${t.message}")
+                    updateNotification("เปิด SSH ไม่สำเร็จ: ${t.message}")
                 }
             }
         }.start()

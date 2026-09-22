@@ -12,8 +12,11 @@ import android.os.Environment
 import android.provider.Settings
 import android.view.View
 import android.widget.TextView
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
@@ -40,7 +43,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        // กันคอนเทนต์ถูกแถบสถานะ/แถบนำทางบัง: เผื่อขอบบนให้ toolbar, ขอบล่างให้เนื้อหา
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root)) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            findViewById<View>(R.id.toolbar).setPadding(0, bars.top, 0, 0)
+            findViewById<View>(R.id.scroll).setPadding(0, 0, 0, bars.bottom)
+            insets
+        }
         prefs = Prefs(this)
 
         root = findViewById(R.id.root)
@@ -60,17 +71,17 @@ class MainActivity : AppCompatActivity() {
         // Switch = immediate setting (ตาม M3: ไม่ต้องกด Save ซ้ำ)
         swRoot.setOnCheckedChangeListener { _, checked ->
             prefs.rootMode = checked
-            snack("โหมด ${if (checked) "root :22" else "non-root :2222"} — มีผลเมื่อเริ่ม SSH ครั้งถัดไป")
+            snack("สลับเป็น${if (checked) "โหมดรูท (:22)" else "โหมดทั่วไป (:2222)"} — มีผลครั้งถัดไปที่เปิด SSH")
             refreshStatus()
         }
         swAuto.setOnCheckedChangeListener { _, checked ->
             prefs.autoStart = checked
             if (checked) SshService.scheduleKeepAlive(this)
-            snack(if (checked) "เปิด auto startup แล้ว" else "ปิด auto startup แล้ว")
+            snack(if (checked) "เปิดการเริ่มอัตโนมัติแล้ว" else "ปิดการเริ่มอัตโนมัติแล้ว")
         }
         swKeyAuth.setOnCheckedChangeListener { _, checked ->
             prefs.keyAuthEnabled = checked
-            snack("key-auth ${if (checked) "เปิด" else "ปิด"} — มีผลเมื่อเริ่ม SSH ครั้งถัดไป")
+            snack("ล็อกอินด้วยคีย์${if (checked) "เปิดแล้ว" else "ปิดแล้ว"} — มีผลครั้งถัดไป")
         }
 
         findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveForm() }
@@ -80,14 +91,15 @@ class MainActivity : AppCompatActivity() {
             try {
                 SshService.start(this)
                 SshService.scheduleKeepAlive(this)
-                snack("กำลังเปิด SSH :${prefs.effectivePort()}")
+                snack("กำลังเปิด SSH บนพอร์ต ${prefs.effectivePort()}")
             } catch (e: Exception) {
-                snack("เปิดไม่สำเร็จ (Android 12+ ต้องเปิดแอปค้างไว้): ${e.message}")
+                snack("เปิดไม่สำเร็จ (Android 12 ขึ้นไปต้องเปิดแอปค้างไว้): ${e.message}")
             }
             refreshStatus()
         }
         findViewById<MaterialButton>(R.id.btnStop).setOnClickListener {
             SshService.stop(this)
+            snack("หยุด SSH แล้ว")
             // หน่วงนิดให้ service หยุดก่อนรีเฟรช
             tvStatus.postDelayed({ refreshStatus() }, 500)
         }
@@ -100,7 +112,7 @@ class MainActivity : AppCompatActivity() {
             }
             val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("ssh", lastConnectCmd))
-            snack("คัดลอกแล้ว: $lastConnectCmd")
+            snack("คัดลอกคำสั่งแล้ว")
         }
     }
 
@@ -122,7 +134,7 @@ class MainActivity : AppCompatActivity() {
     /** username ว่าง = error inline + focus (recoverable validation) */
     private fun validateUser(): Boolean {
         if (etUser.text.toString().trim().isEmpty()) {
-            tilUser.error = "ต้องระบุชื่อผู้ใช้"
+            tilUser.error = "กรุณาระบุชื่อผู้ใช้"
             etUser.requestFocus()
             return false
         }
@@ -134,9 +146,7 @@ class MainActivity : AppCompatActivity() {
         if (!validateUser()) return
         saveCredentials(silent = false)
         refreshStatus()
-    }
-
-    /** บันทึก username/password/keys (transaction เดียว) */
+    }    /** บันทึก username/password/keys (transaction เดียว) */
     private fun saveCredentials(silent: Boolean) {
         prefs.username = etUser.text.toString().trim()
         if (etPass.text.toString().isNotEmpty()) prefs.setPassword(etPass.text.toString())
@@ -144,28 +154,28 @@ class MainActivity : AppCompatActivity() {
         val f = prefs.authorizedKeysFile(this)
         f.parentFile?.mkdirs()
         f.writeText(etAuthKeys.text.toString().trim() + "\n")
-        if (!silent) snack("บันทึกแล้ว (port ${prefs.effectivePort()})")
+        if (!silent) snack("บันทึกแล้ว (พอร์ต ${prefs.effectivePort()})")
     }
 
     private fun refreshStatus() {
         val running = SshServerManager.isRunning
         val port = if (running) SshServerManager.runningPort else prefs.effectivePort()
         val mode = if (prefs.rootMode) {
-            if (ShellEnv.suAvailable()) "root (:22, su พร้อม)" else "root (:22, รอ grant ใน KernelSU)"
+            if (ShellEnv.suAvailable()) "โหมดรูท (พอร์ต 22, พร้อมใช้ su)" else "โหมดรูท (พอร์ต 22, รออนุญาตรูท)"
         } else {
-            "non-root (:2222)"
+            "โหมดทั่วไป (พอร์ต 2222)"
         }
         val user = prefs.username.ifBlank { "droid" }
         val ips = NetUtils.getDeviceIps(this).take(3)
-        val ipLine = if (ips.isEmpty()) "<ต่อ Wi-Fi ก่อน>" else ips.joinToString(" · ")
+        val ipLine = if (ips.isEmpty()) "<เชื่อมต่อ Wi-Fi ก่อน>" else ips.joinToString(" · ")
         lastConnectCmd = if (ips.isEmpty()) "" else "ssh $user@${ips[0]} -p $port"
         tvStatus.text = buildString {
-            append(if (running) "RUNNING :$port" else "STOPPED")
-            if (!running && prefs.userStopped) append(" (หยุดโดยผู้ใช้)")
-            append("\nโหมด $mode · ผู้ใช้ $user")
+            append(if (running) "กำลังทำงาน :$port" else "หยุดทำงาน")
+            if (!running && prefs.userStopped) append(" (คุณกดหยุดไว้)")
+            append("\n$mode · ผู้ใช้ $user")
             append("\nIP: $ipLine")
             if (lastConnectCmd.isNotEmpty()) append("\n$lastConnectCmd")
-            append("\nSFTP เปิด · key-auth ${if (prefs.keyAuthEnabled) "เปิด" else "ปิด"}")
+            append("\nSFTP: เปิด · ล็อกอินด้วยคีย์: ${if (prefs.keyAuthEnabled) "เปิด" else "ปิด"}")
         }
         // semantic roles: running = primaryContainer, stopped = surfaceVariant
         val bgAttr: Int = if (running) MaterialR.attr.colorPrimaryContainer
@@ -211,10 +221,10 @@ class MainActivity : AppCompatActivity() {
                     )
                 )
             } else {
-                snack("มีสิทธิ์ไฟล์แล้ว หรือไม่จำเป็นบนเวอร์ชันนี้")
+                snack("มีสิทธิ์แล้ว หรือรุ่นนี้ไม่ต้องขอ")
             }
         } catch (e: Exception) {
-            snack(e.message ?: "เปิดตั้งค่าไม่ได้")
+            snack(e.message ?: "เปิดหน้าตั้งค่าไม่ได้")
         }
     }
 

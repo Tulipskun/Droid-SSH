@@ -14,12 +14,14 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:title="@string/app_name"
-            app:subtitle="SSH server บนมือถือ" />
+            app:subtitle="เซิร์ฟเวอร์ SSH บนมือถือ" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipToPadding="false"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -75,7 +77,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="ชื่อผู้ใช้"
-                app:helperText="ใช้สำหรับล็อกอิน ssh">
+                app:helperText="ใช้ตอนล็อกอินผ่าน SSH">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etUser"
@@ -92,7 +94,7 @@
                 android:layout_marginTop="8dp"
                 android:hint="รหัสผ่านใหม่"
                 app:endIconMode="password_toggle"
-                app:helperText="เว้นว่างไว้ = ไม่เปลี่ยนรหัสเดิม">
+                app:helperText="เว้นว่างไว้หากไม่ต้องการเปลี่ยน">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPass"
@@ -110,11 +112,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:minHeight="48dp"
-                android:text="Root mode" />
+                android:text="โหมดรูท" />
 
             <TextView
                 style="@style/SectionHint"
-                android:text="เปิด = port 22 + shell ผ่าน su · ปิด = port 2222 (มีผลเมื่อเริ่ม SSH ครั้งถัดไป)" />
+                android:text="เปิด: ใช้พอร์ต 22 กับเชลล์สิทธิ์รูท · ปิด: ใช้พอร์ต 2222 — มีผลครั้งถัดไปที่เปิด SSH" />
 
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/swAuto"
@@ -122,29 +124,29 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:minHeight="48dp"
-                android:text="Auto startup + keep alive" />
+                android:text="เริ่มอัตโนมัติและทำงานค้างไว้" />
 
             <TextView
                 style="@style/SectionHint"
-                android:text="เริ่มเองหลังบูตเครื่อง + ดึง service กลับเมื่อโดน kill" />
+                android:text="เปิดเซิร์ฟเวอร์เองหลังเปิดเครื่อง และเปิดใหม่ให้อัตโนมัติหากถูกปิด" />
 
             <TextView
                 style="@style/SectionHeader"
-                android:text="การยืนยันตัวตนด้วยคีย์" />
+                android:text="คีย์สำหรับล็อกอิน" />
 
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/swKeyAuth"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:minHeight="48dp"
-                android:text="เปิด login ด้วย public key" />
+                android:text="อนุญาตให้ล็อกอินด้วย public key" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:hint="authorized_keys"
-                app:helperText="ssh-rsa / ecdsa / ed25519 ทีละบรรทัด">
+                app:helperText="วางคีย์ ssh-rsa / ecdsa / ed25519 ทีละบรรทัด">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etAuthKeys"
@@ -187,14 +189,14 @@
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="ปิด Battery Optimization (กันโดน kill)" />
+                android:text="ยกเว้นการประหยัดแบต (กันแอปถูกปิด)" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnStorage"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="ขอสิทธิ์ไฟล์ทั้งหมด (สำหรับ SFTP)" />
+                android:text="ขอสิทธิ์เข้าถึงไฟล์ (สำหรับ SFTP)" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
