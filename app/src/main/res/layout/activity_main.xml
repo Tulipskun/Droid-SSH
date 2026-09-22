@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="สถานะ: STOPPED"
+            android:textSize="14sp"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/etUser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="username (default: droid)" />
+
+        <EditText
+            android:id="@+id/etPass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="password"
+            android:inputType="textPassword" />
+
+        <Switch
+            android:id="@+id/swRoot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Root mode (port 22, shell su) — ปิด = port 2222" />
+
+        <Switch
+            android:id="@+id/swAuto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Auto startup + keep alive (boot/service/worker)" />
+
+        <Switch
+            android:id="@+id/swKeyAuth"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="เปิด login ด้วย public key" />
+
+        <EditText
+            android:id="@+id/etAuthKeys"
+            android:layout_width="match_parent"
+            android:layout_height="140dp"
+            android:hint="authorized_keys (วาง ssh-rsa / ssh-ed25519 ทีละบรรทัด)"
+            android:gravity="top"
+            android:inputType="textMultiLine" />
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="บันทึก" />
+
+        <Button
+            android:id="@+id/btnStart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="เปิด SSH" />
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="หยุด SSH" />
+
+        <Button
+            android:id="@+id/btnBattery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ขอปิด Battery Optimization (กันโดน kill)" />
+
+        <Button
+            android:id="@+id/btnStorage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ขอสิทธิ์ไฟล์ทั้งหมด (สำหรับ SFTP)" />
+
+    </LinearLayout>
+</ScrollView>
