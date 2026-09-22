@@ -126,7 +126,8 @@ object SshServerManager {
             if (File("/system/bin/sh").canExecute()) arrayOf("/system/bin/sh", "-i")
             else arrayOf("sh", "-i")
         }
-        val shellFactory = ProcessShellFactory(shellCmd.toList())
+        // ProcessShellFactory(String command, List<String> args)
+        val shellFactory = ProcessShellFactory(shellCmd[0], shellCmd.drop(1))
         server.shellFactory = shellFactory
         // v1: ไม่ตั้ง commandFactory (one-shot `ssh host "cmd"` จะถูกปฏิเสธ แต่ shell + sftp ใช้งานได้)
 
