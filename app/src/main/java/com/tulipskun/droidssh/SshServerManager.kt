@@ -131,7 +131,7 @@ object SshServerManager {
 
         // Shell ผ่าน PTY จริง (มี tty -> ไม่มี warning, job control/vim ใช้ได้)
         // workspace แบบ Termux (HOME/env/.droidrc) อยู่ใน PtyShellFactory/ShellEnv
-        server.shellFactory = PtyShellFactory(app)
+        server.shellFactory = PtyShellFactory(context.applicationContext)
         // one-shot `ssh user@host "cmd"` -> sh -c / su -c
         server.commandFactory = ExecCommandFactory(prefs.rootMode)
 

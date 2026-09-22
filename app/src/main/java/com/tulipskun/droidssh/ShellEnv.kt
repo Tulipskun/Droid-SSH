@@ -53,11 +53,12 @@ object ShellEnv {
         }
     }
 
+    // หมายเหตุ: ${'$'} คือ escape ของ Kotlin เพื่อให้เหลือ $ ในไฟล์ .droidrc จริง
     private const val DEFAULT_RC = """# Droid-SSH default rc — แก้ได้ตามใจ, อัปเกรดแอปไม่เขียนทับ
-HOSTNAME=$(hostname 2>/dev/null || echo android)
-PS1='$USER@$HOSTNAME:$PWD $ '
+HOSTNAME=${'$'}(hostname 2>/dev/null || echo android)
+PS1='${'$'}USER@${'$'}HOSTNAME:${'$'}PWD ${'$'} '
 alias ll='ls -l'
 alias la='ls -la'
-echo "Droid-SSH · user=$USER home=$HOME · 'exit' to disconnect"
+echo "Droid-SSH · user=${'$'}USER home=${'$'}HOME · 'exit' to disconnect"
 """
 }
