@@ -1,90 +1,193 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
-    <LinearLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/tvStatus"
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="@string/app_name"
+            app:subtitle="SSH server บนมือถือ" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="สถานะ: STOPPED"
-            android:textSize="14sp"
-            android:padding="8dp" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <EditText
-            android:id="@+id/etUser"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="username (default: droid)" />
+            <!-- สถานะ: contained unit (filled card = tonal containment) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/statusCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp">
 
-        <EditText
-            android:id="@+id/etPass"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="รหัสผ่านใหม่ (ว่าง = ไม่เปลี่ยน)"
-            android:inputType="textPassword" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-        <Switch
-            android:id="@+id/swRoot"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Root mode (port 22, shell su) — ปิด = port 2222" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="สถานะเซิร์ฟเวอร์"
+                        android:textAppearance="?attr/textAppearanceTitleSmall" />
 
-        <Switch
-            android:id="@+id/swAuto"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Auto startup + keep alive (boot/service/worker)" />
+                    <TextView
+                        android:id="@+id/tvStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="STOPPED"
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-        <Switch
-            android:id="@+id/swKeyAuth"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="เปิด login ด้วย public key" />
+            <TextView
+                style="@style/SectionHeader"
+                android:text="การเชื่อมต่อ" />
 
-        <EditText
-            android:id="@+id/etAuthKeys"
-            android:layout_width="match_parent"
-            android:layout_height="140dp"
-            android:hint="authorized_keys (ssh-rsa / ecdsa / ed25519 ทีละบรรทัด)"
-            android:gravity="top"
-            android:inputType="textMultiLine" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilUser"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="ชื่อผู้ใช้"
+                app:helperText="ใช้สำหรับล็อกอิน ssh">
 
-        <Button
-            android:id="@+id/btnSave"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="บันทึก" />
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <Button
-            android:id="@+id/btnStart"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="เปิด SSH" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilPass"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="รหัสผ่านใหม่"
+                app:endIconMode="password_toggle"
+                app:helperText="เว้นว่างไว้ = ไม่เปลี่ยนรหัสเดิม">
 
-        <Button
-            android:id="@+id/btnStop"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="หยุด SSH" />
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <Button
-            android:id="@+id/btnBattery"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="ขอปิด Battery Optimization (กันโดน kill)" />
+            <TextView
+                style="@style/SectionHeader"
+                android:text="โหมดเซิร์ฟเวอร์" />
 
-        <Button
-            android:id="@+id/btnStorage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="ขอสิทธิ์ไฟล์ทั้งหมด (สำหรับ SFTP)" />
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/swRoot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="Root mode" />
 
-    </LinearLayout>
-</ScrollView>
+            <TextView
+                style="@style/SectionHint"
+                android:text="เปิด = port 22 + shell ผ่าน su · ปิด = port 2222 (มีผลเมื่อเริ่ม SSH ครั้งถัดไป)" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/swAuto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:minHeight="48dp"
+                android:text="Auto startup + keep alive" />
+
+            <TextView
+                style="@style/SectionHint"
+                android:text="เริ่มเองหลังบูตเครื่อง + ดึง service กลับเมื่อโดน kill" />
+
+            <TextView
+                style="@style/SectionHeader"
+                android:text="การยืนยันตัวตนด้วยคีย์" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/swKeyAuth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="เปิด login ด้วย public key" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="authorized_keys"
+                app:helperText="ssh-rsa / ecdsa / ed25519 ทีละบรรทัด">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etAuthKeys"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:gravity="top"
+                    android:inputType="textMultiLine" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Primary action = filled, secondary = tonal/outlined (ห้ามมี filled 2 ปุ่มติดกัน) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStart"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="เปิด SSH" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="บันทึกการตั้งค่า" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStop"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="หยุด SSH" />
+
+            <TextView
+                style="@style/SectionHeader"
+                android:text="ระบบ" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBattery"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ปิด Battery Optimization (กันโดน kill)" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStorage"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ขอสิทธิ์ไฟล์ทั้งหมด (สำหรับ SFTP)" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

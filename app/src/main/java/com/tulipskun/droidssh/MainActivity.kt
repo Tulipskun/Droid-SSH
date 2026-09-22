@@ -8,23 +8,30 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Switch
+import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var prefs: Prefs
-    private lateinit var etUser: EditText
-    private lateinit var etPass: EditText
-    private lateinit var etAuthKeys: EditText
-    private lateinit var swRoot: Switch
-    private lateinit var swAuto: Switch
-    private lateinit var swKeyAuth: Switch
+    private lateinit var root: View
+    private lateinit var tilUser: TextInputLayout
+    private lateinit var etUser: TextInputEditText
+    private lateinit var etPass: TextInputEditText
+    private lateinit var etAuthKeys: TextInputEditText
+    private lateinit var swRoot: SwitchMaterial
+    private lateinit var swAuto: SwitchMaterial
+    private lateinit var swKeyAuth: SwitchMaterial
+    private lateinit var statusCard: MaterialCardView
     private lateinit var tvStatus: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,40 +39,56 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         prefs = Prefs(this)
 
+        root = findViewById(R.id.root)
+        tilUser = findViewById(R.id.tilUser)
         etUser = findViewById(R.id.etUser)
         etPass = findViewById(R.id.etPass)
         etAuthKeys = findViewById(R.id.etAuthKeys)
         swRoot = findViewById(R.id.swRoot)
         swAuto = findViewById(R.id.swAuto)
         swKeyAuth = findViewById(R.id.swKeyAuth)
+        statusCard = findViewById(R.id.statusCard)
         tvStatus = findViewById(R.id.tvStatus)
-        val btnStart: Button = findViewById(R.id.btnStart)
-        val btnStop: Button = findViewById(R.id.btnStop)
-        val btnSave: Button = findViewById(R.id.btnSave)
-        val btnBattery: Button = findViewById(R.id.btnBattery)
-        val btnStorage: Button = findViewById(R.id.btnStorage)
 
         loadForm()
         requestNotifPermission()
 
-        btnSave.setOnClickListener { saveForm() }
-        btnStart.setOnClickListener {
-            saveForm()
+        // Switch = immediate setting (ตาม M3: ไม่ต้องกด Save ซ้ำ)
+        swRoot.setOnCheckedChangeListener { _, checked ->
+            prefs.rootMode = checked
+            snack("โหมด ${if (checked) "root :22" else "non-root :2222"} — มีผลเมื่อเริ่ม SSH ครั้งถัดไป")
+            refreshStatus()
+        }
+        swAuto.setOnCheckedChangeListener { _, checked ->
+            prefs.autoStart = checked
+            if (checked) SshService.scheduleKeepAlive(this)
+            snack(if (checked) "เปิด auto startup แล้ว" else "ปิด auto startup แล้ว")
+        }
+        swKeyAuth.setOnCheckedChangeListener { _, checked ->
+            prefs.keyAuthEnabled = checked
+            snack("key-auth ${if (checked) "เปิด" else "ปิด"} — มีผลเมื่อเริ่ม SSH ครั้งถัดไป")
+        }
+
+        findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveForm() }
+        findViewById<MaterialButton>(R.id.btnStart).setOnClickListener {
+            if (!validateUser()) return@setOnClickListener
+            saveCredentials(silent = true)
             try {
                 SshService.start(this)
                 SshService.scheduleKeepAlive(this)
-                toast("กำลังเปิด SSH :${prefs.effectivePort()}")
+                snack("กำลังเปิด SSH :${prefs.effectivePort()}")
             } catch (e: Exception) {
-                toast("เปิดไม่สำเร็จ (Android 12+ ต้องเปิดแอปค้างไว้): ${e.message}")
+                snack("เปิดไม่สำเร็จ (Android 12+ ต้องเปิดแอปค้างไว้): ${e.message}")
             }
             refreshStatus()
         }
-        btnStop.setOnClickListener {
+        findViewById<MaterialButton>(R.id.btnStop).setOnClickListener {
             SshService.stop(this)
-            refreshStatus()
+            // หน่วงนิดให้ service หยุดก่อนรีเฟรช
+            tvStatus.postDelayed({ refreshStatus() }, 500)
         }
-        btnBattery.setOnClickListener { openBatterySettings() }
-        btnStorage.setOnClickListener { openStorageSettings() }
+        findViewById<MaterialButton>(R.id.btnBattery).setOnClickListener { openBatterySettings() }
+        findViewById<MaterialButton>(R.id.btnStorage).setOnClickListener { openStorageSettings() }
     }
 
     override fun onResume() {
@@ -75,8 +98,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadForm() {
         etUser.setText(prefs.username)
-        etPass.setText("") // hash แล้วแสดงคืนไม่ได้: ว่าง = ไม่เปลี่ยน
-        etPass.hint = if (prefs.hasCustomPassword()) "รหัสผ่านใหม่ (ว่าง = ไม่เปลี่ยน)" else "รหัสผ่าน (default: droid)"
+        etPass.setText("")
         swRoot.isChecked = prefs.rootMode
         swAuto.isChecked = prefs.autoStart
         swKeyAuth.isChecked = prefs.keyAuthEnabled
@@ -84,31 +106,54 @@ class MainActivity : AppCompatActivity() {
         etAuthKeys.setText(if (f.exists()) f.readText() else "")
     }
 
+    /** username ว่าง = error inline + focus (recoverable validation) */
+    private fun validateUser(): Boolean {
+        if (etUser.text.toString().trim().isEmpty()) {
+            tilUser.error = "ต้องระบุชื่อผู้ใช้"
+            etUser.requestFocus()
+            return false
+        }
+        tilUser.error = null
+        return true
+    }
+
     private fun saveForm() {
-        prefs.username = etUser.text.toString().trim().ifEmpty { "droid" }
-        if (etPass.text.isNotEmpty()) prefs.setPassword(etPass.text.toString())
+        if (!validateUser()) return
+        saveCredentials(silent = false)
+        refreshStatus()
+    }
+
+    /** บันทึก username/password/keys (transaction เดียว) */
+    private fun saveCredentials(silent: Boolean) {
+        prefs.username = etUser.text.toString().trim()
+        if (etPass.text.toString().isNotEmpty()) prefs.setPassword(etPass.text.toString())
         etPass.setText("")
-        prefs.rootMode = swRoot.isChecked
-        prefs.autoStart = swAuto.isChecked
-        prefs.keyAuthEnabled = swKeyAuth.isChecked
         val f = prefs.authorizedKeysFile(this)
         f.parentFile?.mkdirs()
         f.writeText(etAuthKeys.text.toString().trim() + "\n")
-        if (prefs.autoStart) SshService.scheduleKeepAlive(this)
-        toast("บันทึกแล้ว (port ${prefs.effectivePort()})")
-        refreshStatus()
+        if (!silent) snack("บันทึกแล้ว (port ${prefs.effectivePort()})")
     }
 
     private fun refreshStatus() {
         val running = SshServerManager.isRunning
         val port = if (running) SshServerManager.runningPort else prefs.effectivePort()
-        val mode = if (prefs.rootMode) "root (22)" else "non-root (2222)"
+        val mode = if (prefs.rootMode) "root (:22)" else "non-root (:2222)"
         tvStatus.text = buildString {
-            append("สถานะ: ${if (running) "RUNNING :$port" else "STOPPED"} \n")
-            append("โหมด: $mode | user: ${prefs.username}\n")
-            append("SFTP: เปิด | key-auth: ${if (prefs.keyAuthEnabled) "เปิด" else "ปิด"}\n")
-            append("เชื่อมต่อ: ssh ${prefs.username}@<ip> -p $port")
+            append(if (running) "RUNNING :$port" else "STOPPED")
+            append("\nโหมด $mode · ผู้ใช้ ${prefs.username}")
+            append("\nSFTP เปิด · key-auth ${if (prefs.keyAuthEnabled) "เปิด" else "ปิด"}")
+            append("\nssh ${prefs.username}@<ip> -p $port")
         }
+        // semantic roles: running = primaryContainer, stopped = surfaceContainerHigh
+        val (bgAttr, fgAttr) = if (running) {
+            R.attr.colorPrimaryContainer to R.attr.colorOnPrimaryContainer
+        } else {
+            R.attr.colorSurfaceContainerHigh to R.attr.colorOnSurfaceVariant
+        }
+        statusCard.setCardBackgroundColor(MaterialColors.getColor(statusCard, bgAttr))
+        tvStatus.setTextColor(MaterialColors.getColor(tvStatus, fgAttr))
+        statusCard.contentDescription =
+            if (running) "เซิร์ฟเวอร์กำลังทำงาน port $port" else "เซิร์ฟเวอร์หยุดทำงาน"
     }
 
     private fun requestNotifPermission() {
@@ -144,13 +189,13 @@ class MainActivity : AppCompatActivity() {
                     )
                 )
             } else {
-                toast("มีสิทธิ์ไฟล์แล้ว หรือไม่จำเป็นบนเวอร์ชันนี้")
+                snack("มีสิทธิ์ไฟล์แล้ว หรือไม่จำเป็นบนเวอร์ชันนี้")
             }
         } catch (e: Exception) {
-            toast(e.message ?: "เปิดตั้งค่าไม่ได้")
+            snack(e.message ?: "เปิดตั้งค่าไม่ได้")
         }
     }
 
-    private fun toast(msg: String) =
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    private fun snack(msg: String) =
+        Snackbar.make(root, msg, Snackbar.LENGTH_SHORT).show()
 }
