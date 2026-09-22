@@ -20,6 +20,10 @@ class BootReceiver : BroadcastReceiver() {
             Log.i(TAG, "autoStart disabled, skip")
             return
         }
+        if (Prefs(context).startBackoffActive()) {
+            Log.i(TAG, "in backoff window, skip autostart")
+            return
+        }
         // Direct boot: ใช้ device-protected storage ถ้าจำเป็น (prefs ธรรมดาอ่านได้หลัง unlock;
         // ถ้า LOCKED_BOOT_COMPLETED มาก่อน unlock อาจ start ไม่ติด จะมี worker ดึงอีกทีหลัง unlock)
         try {

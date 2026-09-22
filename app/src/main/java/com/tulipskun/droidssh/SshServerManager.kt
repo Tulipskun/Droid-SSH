@@ -39,6 +39,13 @@ object SshServerManager {
         val app = context.applicationContext
         val prefs = Prefs(app)
 
+        // FIX: MINA sshd อ่าน user.home ใน static init (ServerBuilder clinit)
+        // บน Android property นี้ว่าง -> "No user home" (เป็น Error หลุด catch Exception)
+        // ชี้ home ไปที่ sandbox ของแอปก่อนแตะคลาส sshd ใดๆ
+        if (System.getProperty("user.home").isNullOrEmpty()) {
+            System.setProperty("user.home", app.filesDir.absolutePath)
+        }
+
         val sshDir = File(app.filesDir, "ssh").apply { mkdirs() }
         val hostKey = File(sshDir, "hostkey.ser")
 
@@ -47,7 +54,7 @@ object SshServerManager {
         val fallback = if (wanted == Prefs.PORT_ROOT) Prefs.PORT_NONROOT else Prefs.PORT_ROOT
         val candidates = listOf(wanted, fallback).distinct()
 
-        var lastEx: Exception? = null
+        var lastEx: Throwable? = null
         for (port in candidates) {
             try {
                 val s = buildServer(app, prefs, hostKey, port)
@@ -57,7 +64,7 @@ object SshServerManager {
                 runningPort = port
                 Log.i(TAG, "sshd started on port $port root=${prefs.rootMode}")
                 return port
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // BindException (port 22 ไม่มีสิทธิ์/root ไม่อนุญาต) -> ลอง port ถัดไป
                 Log.w(TAG, "bind $port failed: ${e.message}")
                 lastEx = e
@@ -79,7 +86,7 @@ object SshServerManager {
     fun stop() {
         try {
             server?.stop()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(TAG, "stop error: ${e.message}")
         } finally {
             started = false

@@ -53,6 +53,28 @@ class Prefs(context: Context) {
     fun hasCustomPassword(): Boolean =
         sp.contains(KEY_PASSHASH) || sp.contains(KEY_PASS)
 
+    // ---------- กัน crash-loop: ล้มเหลวติดกัน 3 ครั้งใน 10 นาที -> หยุด retry ชั่วคราว ----------
+
+    /** บันทึกว่าสตาร์ทล้มเหลว 1 ครั้ง, คืนจำนวนครั้งติดกัน */
+    fun recordStartFailure(): Int {
+        val now = System.currentTimeMillis()
+        val last = sp.getLong(KEY_LAST_FAIL, 0)
+        val count = if (now - last < BACKOFF_WINDOW_MS) sp.getInt(KEY_FAIL_COUNT, 0) + 1 else 1
+        sp.edit().putInt(KEY_FAIL_COUNT, count).putLong(KEY_LAST_FAIL, now).apply()
+        return count
+    }
+
+    fun recordStartSuccess() {
+        sp.edit().putInt(KEY_FAIL_COUNT, 0).apply()
+    }
+
+    /** true = ควรหยุด retry ชั่วคราว (ปล่อยให้ user กดเริ่มเอง) */
+    fun startBackoffActive(): Boolean {
+        val count = sp.getInt(KEY_FAIL_COUNT, 0)
+        if (count < MAX_FAILS) return false
+        return System.currentTimeMillis() - sp.getLong(KEY_LAST_FAIL, 0) < BACKOFF_WINDOW_MS
+    }
+
     /** root mode = พยายามใช้ port 22 + shell ผ่าน su */
     var rootMode: Boolean
         get() = sp.getBoolean(KEY_ROOT, false)
@@ -83,6 +105,11 @@ class Prefs(context: Context) {
         private const val KEY_ROOT = "root_mode"
         private const val KEY_AUTOSTART = "auto_start"
         private const val KEY_KEYAUTH = "key_auth"
+        private const val KEY_FAIL_COUNT = "start_fail_count"
+        private const val KEY_LAST_FAIL = "start_last_fail"
+
+        private const val MAX_FAILS = 3
+        private const val BACKOFF_WINDOW_MS = 10 * 60 * 1000L
 
         private fun genSalt(): String {
             val b = ByteArray(16)

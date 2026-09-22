@@ -40,13 +40,21 @@ class SshService : Service() {
         }
         startForeground(NOTIF_ID, buildNotification("กำลังเปิด SSH..."))
         // รัน start แบบ background thread (กัน ANR)
+        // จับ Throwable (รวม Error เช่น ExceptionInInitializerError) กันแอปเด้ง
         Thread {
             try {
                 val port = SshServerManager.start(this)
+                Prefs(this).recordStartSuccess()
                 updateNotification("SSH รันอยู่ :$port")
-            } catch (e: Exception) {
-                Log.e(TAG, "start failed", e)
-                updateNotification("เปิดไม่สำเร็จ: ${e.message}")
+            } catch (t: Throwable) {
+                val fails = Prefs(this).recordStartFailure()
+                Log.e(TAG, "start failed", t)
+                if (Prefs(this).startBackoffActive()) {
+                    updateNotification("หยุดชั่วคราว (ล้มเหลว $fails ครั้งติดกัน) — กดเปิด SSH ใหม่เพื่อลองอีกครั้ง")
+                    stopSelf()
+                } else {
+                    updateNotification("เปิดไม่สำเร็จ: ${t.message}")
+                }
             }
         }.start()
         acquireLocks()

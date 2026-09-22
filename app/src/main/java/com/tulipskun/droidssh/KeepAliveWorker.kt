@@ -9,9 +9,10 @@ import androidx.work.WorkerParameters
 /** ตรวจทุก 15 นาที: ถ้าเปิด autoStart แต่ server ดับ -> สตาร์ทใหม่. */
 class KeepAliveWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
     override fun doWork(): Result {
-        return try {
+        return         try {
             val prefs = Prefs(applicationContext)
             if (!prefs.autoStart) return Result.success()
+            if (prefs.startBackoffActive()) return Result.success()
             if (!SshServerManager.isRunning) {
                 Log.i(TAG, "server down, restarting")
                 applicationContext.startForegroundService(Intent(applicationContext, SshService::class.java))
