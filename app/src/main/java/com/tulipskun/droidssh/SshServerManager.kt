@@ -16,8 +16,8 @@ import java.security.PublicKey
 
 /**
  * จัดการ Apache MINA SSHD lifecycle.
- * - รองรับ password + publickey พร้อมกัน
- * - shell + sftp
+ * - รองรับ password (SHA-256+salt) + publickey (RSA/ECDSA/Ed25519) พร้อมกัน
+ * - shell + one-shot exec + sftp
  * - port 22 (root) / 2222 (non-root) + fallback อัตโนมัติ
  */
 object SshServerManager {
@@ -104,11 +104,10 @@ object SshServerManager {
         server.keyPairProvider = keyProvider
 
         val username = prefs.username.ifBlank { "droid" }
-        val password = prefs.password
 
         server.passwordAuthenticator = PasswordAuthenticator { u: String?, p: String?, _: ServerSession? ->
             if (u == null || p == null) return@PasswordAuthenticator false
-            u == username && p == password
+            u == username && prefs.checkPassword(p)
         }
 
         server.publickeyAuthenticator = PublickeyAuthenticator { u: String?, key: PublicKey?, _: ServerSession? ->
@@ -129,35 +128,37 @@ object SshServerManager {
         // ProcessShellFactory(String command, List<String> args)
         val shellFactory = ProcessShellFactory(shellCmd[0], shellCmd.drop(1))
         server.shellFactory = shellFactory
-        // v1: ไม่ตั้ง commandFactory (one-shot `ssh host "cmd"` จะถูกปฏิเสธ แต่ shell + sftp ใช้งานได้)
+        // one-shot `ssh user@host "cmd"` -> sh -c / su -c
+        server.commandFactory = ExecCommandFactory(prefs.rootMode)
 
         server.subsystemFactories = listOf(SftpSubsystemFactory())
 
         return server
     }
 
-    /** เทียบ public key ที่ login เข้ามากับไฟล์ authorized_keys */
+    /** เทียบ public key ที่ login เข้ามากับไฟล์ authorized_keys (รองรับ options ข้างหน้า) */
     private fun isKeyAuthorized(context: Context, prefs: Prefs, key: PublicKey): Boolean {
         return try {
             val f = prefs.authorizedKeysFile(context)
             if (!f.exists()) return false
-            val authorized = f.readLines()
+            val incoming = SshKeyUtils.encodeToOpenSsh(key) ?: return false
+            val (inType, inBlob) = splitKeyLine(incoming) ?: return false
+            f.readLines()
                 .map { it.trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("#") }
-            if (authorized.isEmpty()) return false
-            // เทียบแบบง่าย: encode key เป็น OpenSSH แล้วเช็ค blob ตรงกัน
-            val incoming = SshKeyUtils.encodeToOpenSsh(key) ?: return false
-            val incomingBlob = incoming.substringAfter(" ", "").substringBefore(" ")
-            authorized.any { line ->
-                val blob = line.substringAfter(" ", "").substringBefore(" ")
-                blob == incomingBlob
-            }
+                .mapNotNull { splitKeyLine(it) }
+                .any { (t, b) -> t == inType && b == inBlob }
         } catch (e: Exception) {
             Log.w(TAG, "key check failed: ${e.message}")
             false
         }
     }
-}
 
-// หมายเหตุ key-auth v1: รองรับ ssh-rsa เต็มรูปแบบ (เทียบ blob);
-// EC/Ed25519 ยังใช้ password ไปก่อน จะขยาย parser ใน v0.2
+    /** หา token ชนิดคีย์ (ssh-*/ecdsa-*) แล้วคืน (type, blob) */
+    private fun splitKeyLine(line: String): Pair<String, String>? {
+        val parts = line.trim().split(Regex("\\s+"))
+        val i = parts.indexOfFirst { it.startsWith("ssh-") || it.startsWith("ecdsa-") }
+        if (i < 0 || i + 1 >= parts.size) return null
+        return parts[i] to parts[i + 1]
+    }
+}

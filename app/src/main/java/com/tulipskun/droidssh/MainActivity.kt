@@ -75,7 +75,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadForm() {
         etUser.setText(prefs.username)
-        etPass.setText(prefs.password)
+        etPass.setText("") // hash แล้วแสดงคืนไม่ได้: ว่าง = ไม่เปลี่ยน
+        etPass.hint = if (prefs.hasCustomPassword()) "รหัสผ่านใหม่ (ว่าง = ไม่เปลี่ยน)" else "รหัสผ่าน (default: droid)"
         swRoot.isChecked = prefs.rootMode
         swAuto.isChecked = prefs.autoStart
         swKeyAuth.isChecked = prefs.keyAuthEnabled
@@ -85,7 +86,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun saveForm() {
         prefs.username = etUser.text.toString().trim().ifEmpty { "droid" }
-        prefs.password = etPass.text.toString().ifEmpty { "droid" }
+        if (etPass.text.isNotEmpty()) prefs.setPassword(etPass.text.toString())
+        etPass.setText("")
         prefs.rootMode = swRoot.isChecked
         prefs.autoStart = swAuto.isChecked
         prefs.keyAuthEnabled = swKeyAuth.isChecked

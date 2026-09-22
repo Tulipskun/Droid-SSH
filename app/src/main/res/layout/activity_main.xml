@@ -27,7 +27,7 @@
             android:id="@+id/etPass"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="password"
+            android:hint="รหัสผ่านใหม่ (ว่าง = ไม่เปลี่ยน)"
             android:inputType="textPassword" />
 
         <Switch
@@ -52,7 +52,7 @@
             android:id="@+id/etAuthKeys"
             android:layout_width="match_parent"
             android:layout_height="140dp"
-            android:hint="authorized_keys (วาง ssh-rsa / ssh-ed25519 ทีละบรรทัด)"
+            android:hint="authorized_keys (ssh-rsa / ecdsa / ed25519 ทีละบรรทัด)"
             android:gravity="top"
             android:inputType="textMultiLine" />
 

@@ -78,6 +78,10 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs Droid-SSH.apk | grep -i "SHA-256"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs Droid-SSH.apk | grep -qi "CN=Droid-SSH"
 
+      - name: Verify APK 16 KB alignment
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 Droid-SSH.apk
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

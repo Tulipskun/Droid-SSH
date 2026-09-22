@@ -2,8 +2,8 @@
 
 แอป Android (Kotlin) เปิด **SSHD server** บนมือถือ — sideload only (ไม่ขึ้น Play Store)
 
-- Shell + SFTP (Apache MINA SSHD)
-- Login: password + public key (`authorized_keys`) พร้อมกัน (v1: key ชนิด `ssh-rsa`,ชนิดอื่นใช้ password ไปก่อน)
+- Shell + one-shot exec (`ssh user@host "cmd"`) + SFTP (Apache MINA SSHD)
+- Login: password (เก็บเป็น SHA-256+salt) + public key (`authorized_keys`: ssh-rsa/ecdsa/ed25519) พร้อมกัน
 - Port: **22** (root mode, shell ผ่าน `su`) / **2222** (non-root) + fallback อัตโนมัติถ้า bind ไม่ได้
 - Auto startup: `BOOT_COMPLETED / MY_PACKAGE_REPLACED / QUICKBOOT` + `directBootAware`
 - Keep alive: ForegroundService (`START_STICKY`) + notification, WifiLock/WakeLock, WorkManager 15 นาที, restart เมื่อ swipe ทิ้ง
@@ -24,8 +24,9 @@ push `main` -> workflow `Android build` รัน `gradle assembleDebug` แล�
 ## ใช้งาน
 
 ```
-ssh droid@<ip-mือถือ> -p 2222   # non-root
+ssh droid@<ip-มือถือ> -p 2222   # non-root
 ssh droid@<ip-มือถือ> -p 22     # root mode
+ssh droid@<ip-มือถือ> -p 2222 "ls /sdcard"  # one-shot exec
 sftp -P 2222 droid@<ip>
 ```
 

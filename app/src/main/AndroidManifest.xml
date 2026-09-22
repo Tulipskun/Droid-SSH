@@ -9,7 +9,7 @@
 
     <!-- Foreground service + autostart + keep alive -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -24,8 +24,7 @@
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme"
-        android:extractNativeLibs="true">
+        android:theme="@style/AppTheme">
 
         <activity
             android:name=".MainActivity"
@@ -39,7 +38,11 @@
         <service
             android:name=".SshService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="ssh_server_host" />
+        </service>
 
         <!-- Auto startup หลัง boot / อัปเดตแอป -->
         <receiver
