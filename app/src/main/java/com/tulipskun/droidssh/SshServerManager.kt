@@ -154,7 +154,7 @@ object SshServerManager {
         }
     }
 
-    /** หา token ชนิดคีย์ (ssh-*/ecdsa-*) แล้วคืน (type, blob) */
+    /** หา token ชนิดคีย์ (ssh-xxx / ecdsa-xxx) แล้วคืน (type, blob) */
     private fun splitKeyLine(line: String): Pair<String, String>? {
         val parts = line.trim().split(Regex("\\s+"))
         val i = parts.indexOfFirst { it.startsWith("ssh-") || it.startsWith("ecdsa-") }
