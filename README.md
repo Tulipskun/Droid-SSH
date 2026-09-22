@@ -13,6 +13,14 @@
 
 push `main` -> workflow `Android build` รัน `gradle assembleDebug` แล้วแนบ `Droid-SSH.apk` ใน Release `v0.1.<run>` อัตโนมัติ
 
+## ลายเซ็น (stable key)
+
+ทุก build เซ็นด้วยคีย์เดิม (`CN=Droid-SSH`, หมดอายุ 2056, เก็บเป็น `app/droid-ssh-debug.keystore.b64`)
+-> ติดตั้งทับเวอร์ชันใหม่ได้เลยโดยไม่ต้องถอน
+
+> ผู้ที่ลงเวอร์ชันเก่ากว่า stable key (v0.1.3 ลงมา ซึ่งเซ็นด้วย debug key แบบสุ่มของ runner)
+> ต้องถอนติดตั้งครั้งเดียว แล้วลงเวอร์ชันใหม่ หลังจากนั้นอัปเดตทับได้ตลอด
+
 ## ใช้งาน
 
 ```

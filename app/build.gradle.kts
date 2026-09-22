@@ -25,12 +25,33 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        // Stable key สำหรับ sideload: ทุก build เซ็นด้วยคีย์เดิม อัปเดตทับได้
+        // keystore ถูก decode จาก droid-ssh-debug.keystore.b64 ใน CI
+        create("stable") {
+            val stableKeystore = file("droid-ssh-debug.keystore")
+            if (stableKeystore.exists()) {
+                storeFile = stableKeystore
+                storeType = "PKCS12"
+                storePassword = "droidsshdebug"
+                keyAlias = "droid-ssh-debug"
+                keyPassword = "droidsshdebug"
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
-            // Sideload only: ใช้ debug signing ปกติของ Gradle
-            // ถ้าต้องการลายเซ็นคงที่ข้าม build ให้เพิ่ม stable keystore ภายหลัง
+            val stableKeystore = file("droid-ssh-debug.keystore")
+            if (stableKeystore.exists()) {
+                signingConfig = signingConfigs.getByName("stable")
+            }
         }
         getByName("release") {
+            val stableKeystore = file("droid-ssh-debug.keystore")
+            if (stableKeystore.exists()) {
+                signingConfig = signingConfigs.getByName("stable")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

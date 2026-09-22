@@ -9,4 +9,5 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk
-!app/droid-ssh-debug.keystore
+# keystore binary ถูกสร้างจาก .b64 ใน CI — track แค่ไฟล์ .b64
+app/droid-ssh-debug.keystore
