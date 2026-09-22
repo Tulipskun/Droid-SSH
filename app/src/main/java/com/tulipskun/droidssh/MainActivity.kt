@@ -1,6 +1,8 @@
 package com.tulipskun.droidssh
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var swKeyAuth: SwitchMaterial
     private lateinit var statusCard: MaterialCardView
     private lateinit var tvStatus: TextView
+    private var lastConnectCmd: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +93,15 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.btnBattery).setOnClickListener { openBatterySettings() }
         findViewById<MaterialButton>(R.id.btnStorage).setOnClickListener { openStorageSettings() }
+        findViewById<MaterialButton>(R.id.btnCopy).setOnClickListener {
+            if (lastConnectCmd.isEmpty()) {
+                snack("ยังไม่มีคำสั่งเชื่อมต่อ (เปิด SSH ก่อน)")
+                return@setOnClickListener
+            }
+            val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("ssh", lastConnectCmd))
+            snack("คัดลอกแล้ว: $lastConnectCmd")
+        }
     }
 
     override fun onResume() {
@@ -139,11 +151,16 @@ class MainActivity : AppCompatActivity() {
         val running = SshServerManager.isRunning
         val port = if (running) SshServerManager.runningPort else prefs.effectivePort()
         val mode = if (prefs.rootMode) "root (:22)" else "non-root (:2222)"
+        val user = prefs.username.ifBlank { "droid" }
+        val ips = NetUtils.getDeviceIps(this).take(3)
+        val ipLine = if (ips.isEmpty()) "<ต่อ Wi-Fi ก่อน>" else ips.joinToString(" · ")
+        lastConnectCmd = if (ips.isEmpty()) "" else "ssh $user@${ips[0]} -p $port"
         tvStatus.text = buildString {
             append(if (running) "RUNNING :$port" else "STOPPED")
-            append("\nโหมด $mode · ผู้ใช้ ${prefs.username}")
+            append("\nโหมด $mode · ผู้ใช้ $user")
+            append("\nIP: $ipLine")
+            if (lastConnectCmd.isNotEmpty()) append("\n$lastConnectCmd")
             append("\nSFTP เปิด · key-auth ${if (prefs.keyAuthEnabled) "เปิด" else "ปิด"}")
-            append("\nssh ${prefs.username}@<ip> -p $port")
         }
         // semantic roles: running = primaryContainer, stopped = surfaceVariant
         val bgAttr: Int = if (running) MaterialR.attr.colorPrimaryContainer

@@ -138,8 +138,10 @@ object SshServerManager {
             if (File("/system/bin/sh").canExecute()) arrayOf("/system/bin/sh", "-i")
             else arrayOf("sh", "-i")
         }
-        // ProcessShellFactory(String command, List<String> args)
-        val shellFactory = ProcessShellFactory(shellCmd[0], shellCmd.drop(1))
+        // ProcessShellFactory(String rawCommand, List<String> argv):
+        // บน Unix ตัวที่รันจริงคือ elements ทั้งหมด (raw ใช้เฉพาะ Windows)
+        // เคยส่ง ("sh", ["-i"]) -> รันแค่ "-i" -> "No such file" (shell เด้ง, exec ไม่เกี่ยว)
+        val shellFactory = ProcessShellFactory(shellCmd.joinToString(" "), shellCmd.toList())
         server.shellFactory = shellFactory
         // one-shot `ssh user@host "cmd"` -> sh -c / su -c
         server.commandFactory = ExecCommandFactory(prefs.rootMode)

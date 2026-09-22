@@ -54,6 +54,14 @@
                         android:layout_marginTop="8dp"
                         android:text="STOPPED"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCopy"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="คัดลอกคำสั่งเชื่อมต่อ" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
