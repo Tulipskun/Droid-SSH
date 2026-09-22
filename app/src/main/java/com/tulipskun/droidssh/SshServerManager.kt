@@ -126,9 +126,9 @@ object SshServerManager {
             if (File("/system/bin/sh").canExecute()) arrayOf("/system/bin/sh", "-i")
             else arrayOf("sh", "-i")
         }
-        val shellFactory = ProcessShellFactory(*shellCmd)
+        val shellFactory = ProcessShellFactory(shellCmd.toList())
         server.shellFactory = shellFactory
-        server.commandFactory = shellFactory // รองรับ `ssh user@host "ls /sdcard"`
+        // v1: ไม่ตั้ง commandFactory (one-shot `ssh host "cmd"` จะถูกปฏิเสธ แต่ shell + sftp ใช้งานได้)
 
         server.subsystemFactories = listOf(SftpSubsystemFactory())
 
