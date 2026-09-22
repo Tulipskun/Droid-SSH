@@ -30,4 +30,11 @@ ssh droid@<ip-มือถือ> -p 2222 "ls /sdcard"  # one-shot exec
 sftp -P 2222 droid@<ip>
 ```
 
+## Workspace แบบ Termux
+
+- Shell ได้ **PTY จริง** (JNI forkpty) — มี tty, job control, `vim`/`top`/`stty` ใช้ได้ ไม่มี warning
+- เข้า shell แล้วอยู่ `~/home` ของแอปทันที (`/data/data/.../files/home`)
+- env ครบ: `HOME USER SHELL TERM LANG PATH TMPDIR` (+ `TERM/LANG` จาก client)
+- `~/.droidrc` ถูก source ทุกครั้ง (prompt `user@host:$PWD $`, alias `ll/la`, motd) — แก้เองได้ อัปเกรดไม่เขียนทับ
+
 > หมายเหตุ Android 12+: ระบบจำกัด start FGS จาก background หลัง boot — ถ้า auto-start โดนบล็อก ให้เปิดแอปครั้งนึงแล้วกด “เปิด SSH” + อนุญาต Ignore Battery + ล็อกแอปกันโดน kill (OEM: Xiaomi/Oppo/Vivo ต้องเปิด Autostart เพิ่ม)
