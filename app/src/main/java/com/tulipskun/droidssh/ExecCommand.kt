@@ -31,7 +31,7 @@ class ExecCommandFactory(
         }
         val useSu = rootMode && ShellEnv.suAvailable()
         if (rootMode && !useSu) {
-            Log.w(TAG, "root mode ON แต่เรียก su ไม่ได้ — exec รันเป็น app user")
+            Log.w("ExecCommand", "root mode ON แต่เรียก su ไม่ได้ — exec รันเป็น app user")
         }
         val bin = if (useSu) "su"
             else if (java.io.File("/system/bin/sh").canExecute()) "/system/bin/sh"
