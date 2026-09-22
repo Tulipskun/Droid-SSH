@@ -157,6 +157,7 @@ class MainActivity : AppCompatActivity() {
         lastConnectCmd = if (ips.isEmpty()) "" else "ssh $user@${ips[0]} -p $port"
         tvStatus.text = buildString {
             append(if (running) "RUNNING :$port" else "STOPPED")
+            if (!running && prefs.userStopped) append(" (หยุดโดยผู้ใช้)")
             append("\nโหมด $mode · ผู้ใช้ $user")
             append("\nIP: $ipLine")
             if (lastConnectCmd.isNotEmpty()) append("\n$lastConnectCmd")

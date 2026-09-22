@@ -12,6 +12,7 @@ class KeepAliveWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
         return         try {
             val prefs = Prefs(applicationContext)
             if (!prefs.autoStart) return Result.success()
+            if (prefs.userStopped) return Result.success()
             if (prefs.startBackoffActive()) return Result.success()
             if (!SshServerManager.isRunning) {
                 Log.i(TAG, "server down, restarting")

@@ -33,11 +33,14 @@ class SshService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                // ผู้ใช้สั่งหยุดเอง -> ห้าม auto-restart จนกว่าจะกดเปิดใหม่
+                Prefs(this).userStopped = true
                 stopSsh()
                 stopSelf()
                 return START_NOT_STICKY
             }
         }
+        Prefs(this).userStopped = false
         startForeground(NOTIF_ID, buildNotification("กำลังเปิด SSH..."))
         // รัน start แบบ background thread (กัน ANR)
         // จับ Throwable (รวม Error เช่น ExceptionInInitializerError) กันแอปเด้ง
@@ -72,8 +75,8 @@ class SshService : Service() {
         stopSsh()
         releaseLocks()
         isRunning = false
-        // ถ้า autoStart เปิดอยู่ ให้ worker ดึงกลับมา
-        if (Prefs(this).autoStart) {
+        // ถ้า autoStart เปิดอยู่ "และ" ไม่ได้ถูกหยุดโดยผู้ใช้ -> ให้ worker ดึงกลับมา
+        if (Prefs(this).autoStart && !Prefs(this).userStopped) {
             sendBroadcast(Intent(ACTION_RESTART).setClass(this, RestartReceiver::class.java))
         }
         super.onDestroy()

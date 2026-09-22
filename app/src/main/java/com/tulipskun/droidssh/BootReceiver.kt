@@ -20,6 +20,10 @@ class BootReceiver : BroadcastReceiver() {
             Log.i(TAG, "autoStart disabled, skip")
             return
         }
+        if (Prefs(context).userStopped) {
+            Log.i(TAG, "user stopped manually, skip autostart")
+            return
+        }
         if (Prefs(context).startBackoffActive()) {
             Log.i(TAG, "in backoff window, skip autostart")
             return

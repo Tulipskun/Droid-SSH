@@ -9,6 +9,7 @@ import android.util.Log
 class RestartReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (!Prefs(context).autoStart) return
+        if (Prefs(context).userStopped) return
         if (Prefs(context).startBackoffActive()) return
         if (SshService.isRunning && SshServerManager.isRunning) return
         Log.i(TAG, "restarting ssh service")

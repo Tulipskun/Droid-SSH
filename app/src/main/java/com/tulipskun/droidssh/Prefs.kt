@@ -88,6 +88,14 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_KEYAUTH, true)
         set(v) = sp.edit().putBoolean(KEY_KEYAUTH, v).apply()
 
+    /**
+     * true = ผู้ใช้กด "หยุด SSH" เอง -> ระบบห้าม auto-restart ทุกช่องทาง
+     * จนกว่าผู้ใช้จะกด "เปิด SSH" (ซึ่งจะล้าง flag นี้)
+     */
+    var userStopped: Boolean
+        get() = sp.getBoolean(KEY_USER_STOPPED, false)
+        set(v) = sp.edit().putBoolean(KEY_USER_STOPPED, v).apply()
+
     /** Port ที่ใช้จริง: root -> 22, non-root -> 2222 (ตามสเปก) */
     fun effectivePort(): Int = if (rootMode) PORT_ROOT else PORT_NONROOT
 
@@ -105,6 +113,7 @@ class Prefs(context: Context) {
         private const val KEY_ROOT = "root_mode"
         private const val KEY_AUTOSTART = "auto_start"
         private const val KEY_KEYAUTH = "key_auth"
+        private const val KEY_USER_STOPPED = "user_stopped"
         private const val KEY_FAIL_COUNT = "start_fail_count"
         private const val KEY_LAST_FAIL = "start_last_fail"
 
