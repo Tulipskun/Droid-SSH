@@ -2,6 +2,7 @@ package com.tulipskun.droidssh
 
 import android.content.Context
 import android.util.Log
+import org.apache.sshd.common.util.OsUtils
 import org.apache.sshd.server.SshServer
 import org.apache.sshd.server.auth.password.PasswordAuthenticator
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator
@@ -45,6 +46,11 @@ object SshServerManager {
         if (System.getProperty("user.home").isNullOrEmpty()) {
             System.setProperty("user.home", app.filesDir.absolutePath)
         }
+        // FIX: auto-detect Android ของ sshd 2.12.0 เสีย (เช็คชื่อ property แทนค่า)
+        // บังคับเองเพื่อให้เข้า branch เฉพาะ Android (เช่น เลี่ยง JMX ใน peelException)
+        // หมายเหตุ: ยังมี javax.management stubs กันอีกชั้น เผื่อ path ที่ไม่เช็ค flag
+        OsUtils.setAndroid(true)
+        System.setProperty(OsUtils.CURRENT_USER_OVERRIDE_PROP, prefs.username.ifBlank { "droid" })
 
         val sshDir = File(app.filesDir, "ssh").apply { mkdirs() }
         val hostKey = File(sshDir, "hostkey.ser")
