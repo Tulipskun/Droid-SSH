@@ -19,6 +19,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.R as MaterialR
 
 class MainActivity : AppCompatActivity() {
 
@@ -144,12 +145,11 @@ class MainActivity : AppCompatActivity() {
             append("\nSFTP เปิด · key-auth ${if (prefs.keyAuthEnabled) "เปิด" else "ปิด"}")
             append("\nssh ${prefs.username}@<ip> -p $port")
         }
-        // semantic roles: running = primaryContainer, stopped = surfaceContainerHigh
-        val (bgAttr, fgAttr) = if (running) {
-            R.attr.colorPrimaryContainer to R.attr.colorOnPrimaryContainer
-        } else {
-            R.attr.colorSurfaceContainerHigh to R.attr.colorOnSurfaceVariant
-        }
+        // semantic roles: running = primaryContainer, stopped = surfaceVariant
+        val bgAttr: Int = if (running) MaterialR.attr.colorPrimaryContainer
+            else MaterialR.attr.colorSurfaceVariant
+        val fgAttr: Int = if (running) MaterialR.attr.colorOnPrimaryContainer
+            else MaterialR.attr.colorOnSurfaceVariant
         statusCard.setCardBackgroundColor(MaterialColors.getColor(statusCard, bgAttr))
         tvStatus.setTextColor(MaterialColors.getColor(tvStatus, fgAttr))
         statusCard.contentDescription =
