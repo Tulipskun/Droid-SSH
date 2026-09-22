@@ -135,8 +135,8 @@ object SshServerManager {
         // Shell ผ่าน PTY จริง (มี tty -> ไม่มี warning, job control/vim ใช้ได้)
         // workspace แบบ Termux (HOME/env/.droidrc) อยู่ใน PtyShellFactory/ShellEnv
         server.shellFactory = PtyShellFactory(context.applicationContext)
-        // one-shot `ssh user@host "cmd"` -> sh -c / su -c
-        server.commandFactory = ExecCommandFactory(prefs.rootMode)
+        // one-shot `ssh user@host "cmd"` -> sh -c / su -c (workspace เดียวกับ shell)
+        server.commandFactory = ExecCommandFactory(context.applicationContext, prefs.rootMode)
 
         // SFTP เริ่มที่ home (bare ls/put/get ใช้ได้) แต่ absolute path ยังเห็นทั้งเครื่อง
         val sftpBase = SftpSubsystemFactory()

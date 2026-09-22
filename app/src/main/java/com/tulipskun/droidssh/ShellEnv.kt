@@ -13,8 +13,18 @@ import java.nio.file.Files
 object ShellEnv {
     const val RC_NAME = ".droidrc"
 
-    fun homeDir(context: Context): File =
-        File(context.applicationContext.filesDir, "home").apply { mkdirs() }
+    fun homeDir(context: Context): File {
+        val raw = File(context.applicationContext.filesDir, "home").apply { mkdirs() }
+        // FIX: filesDir มาในรูป /data/user/0/... ซึ่งมี symlink component
+        // sshd ตรวจ "parent ต้องไม่มี symlink" ตอนลบไฟล์ (checkSymlinkState) ->
+        // rm ด้วย relative path ล้มทั้งที่ไฟล์มีอยู่จริง
+        // canonicalFile จะได้ path จริง (/data/data/...) ไร้ symlink
+        return try {
+            raw.canonicalFile
+        } catch (_: Exception) {
+            raw
+        }
+    }
 
     fun build(context: Context, username: String, term: String, extra: Map<String, String>): Array<String> {
         val app = context.applicationContext
