@@ -24,7 +24,6 @@ object GuestManager {
     private const val TAG = "GuestManager"
     const val GUEST_VERSION = 1
     private const val RELEASE_TAG = "termux-guest-v1"
-    private const val GUEST_TERM_PATH = "/data/data/com.termux/files/usr/bin/bash"
 
     private val DROPROOT_ASSET = mapOf("arm64-v8a" to "droproot-arm64-v8a")
     private val GUEST_ZIP = mapOf("arm64-v8a" to "termux-guest-aarch64.zip")
@@ -128,13 +127,14 @@ object GuestManager {
     }
 
     private const val D = "$"
+    private const val TERMUX_BIN = "/data/data/com.termux/files/usr/bin"
+    private const val TERMUX_HOME = "/data/data/com.termux/files/home"
 
     fun writeLoginWrappers(ctx: Context) {
         try {
             val app = ctx.applicationContext
             val g = guestDir(app).absolutePath
             val uid = Process.myUid()
-            // กลุ่มทั้งหมดของแอป (รวม inet) จาก /proc — Os.getgroups() ไม่มีใน SDK
             val groups = try {
                 File("/proc/self/status").readLines()
                     .firstOrNull { it.startsWith("Groups:") }
@@ -144,20 +144,23 @@ object GuestManager {
             } catch (_: Exception) {
                 "$uid"
             }
+            // PATH แบบ Termux จริง (prefix ก่อน) + HOME ของ guest
+            val guestEnv = "HOME=" + TERMUX_HOME + " PATH=" + TERMUX_BIN + ":/system/bin:/system/xbin TERM=" + D + "{TERM:-xterm-256color}"
             val bin = File(ShellEnv.homeDir(app), "bin").apply { mkdirs() }
             File(bin, "tlogin").writeText(
                 "#!/system/bin/sh\n" +
                     "# เข้า Termux guest (มี apt/pkg) ในฐานะ user ปกติ\n" +
                     "GUEST='" + g + "'\n" +
                     "[ -x \"" + D + "GUEST/droproot\" ] || { echo 'ยังไม่ติดตั้ง guest'; exit 1; }\n" +
+                    "su -c \"mkdir -p \\\"" + D + "GUEST" + TERMUX_HOME + "\\\"; chown " + uid + ":" + uid + " \\\"" + D + "GUEST" + TERMUX_HOME + "\\\"\" 2>/dev/null\n" +
                     "exec su -c \"chroot \\\"" + D + "GUEST\\\" /droproot " +
-                    uid + " " + uid + " " + groups + " -- " + GUEST_TERM_PATH + " -l\"\n"
+                    uid + " " + uid + " " + groups + " -- " + TERMUX_BIN + "/usr/bin/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
             )
             File(bin, "tlogin-root").writeText(
                 "#!/system/bin/sh\n" +
                     "# เข้า Termux guest ในฐานะ root\n" +
                     "GUEST='" + g + "'\n" +
-                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" " + GUEST_TERM_PATH + " -l\"\n"
+                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" " + TERMUX_BIN + "/usr/bin/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
             )
             chmod(File(bin, "tlogin"))
             chmod(File(bin, "tlogin-root"))

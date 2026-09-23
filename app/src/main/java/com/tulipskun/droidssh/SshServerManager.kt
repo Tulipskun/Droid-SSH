@@ -54,6 +54,17 @@ object SshServerManager {
         OsUtils.setAndroid(true)
         System.setProperty(OsUtils.CURRENT_USER_OVERRIDE_PROP, prefs.username.ifBlank { "droid" })
 
+        // Termux guest: รีเฟรช wrapper + mount ใหม่ทุกครั้งที่สตาร์ท (mount หายหลังรีบูต)
+        if (GuestManager.isInstalled(app)) {
+            try {
+                GuestManager.writeLoginWrappers(app)
+                GuestManager.writeResolvConf(app)
+                GuestManager.ensureMounts(app)
+            } catch (e: Exception) {
+                Log.w(TAG, "guest setup: ${e.message}")
+            }
+        }
+
         val sshDir = File(app.filesDir, "ssh").apply { mkdirs() }
         val hostKey = File(sshDir, "hostkey.ser")
 
