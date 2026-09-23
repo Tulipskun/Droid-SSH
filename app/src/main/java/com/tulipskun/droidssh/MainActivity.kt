@@ -42,6 +42,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvGuest: TextView
     private lateinit var btnGuest: MaterialButton
     private var lastConnectCmd: String = ""
+    // กัน listener วนซ้ำตอนกด "เลิกทำ" (setChecked โปรแกรมมาติก)
+    private var suppressSwitch = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,20 +74,19 @@ class MainActivity : AppCompatActivity() {
         loadForm()
         requestNotifPermission()
 
-        // Switch = immediate setting (ตาม M3: ไม่ต้องกด Save ซ้ำ)
+        // Switch = immediate setting แต่มี "เลิกทำ" ทุกครั้ง
+        // (สวิตช์เต็มความกว้างจอ แตะโดนตอนเลื่อนได้ง่าย — ต้องกู้คืนได้ใน 1 แตะ)
         swRoot.setOnCheckedChangeListener { _, checked ->
-            prefs.rootMode = checked
-            snack("สลับเป็น${if (checked) "โหมดรูท (:22)" else "โหมดทั่วไป (:2222)"} — มีผลครั้งถัดไปที่เปิด SSH")
-            refreshStatus()
+            if (suppressSwitch) return@setOnCheckedChangeListener
+            applyRoot(checked, showUndo = true)
         }
         swAuto.setOnCheckedChangeListener { _, checked ->
-            prefs.autoStart = checked
-            if (checked) SshService.scheduleKeepAlive(this)
-            snack(if (checked) "เปิดการเริ่มอัตโนมัติแล้ว" else "ปิดการเริ่มอัตโนมัติแล้ว")
+            if (suppressSwitch) return@setOnCheckedChangeListener
+            applyAuto(checked, showUndo = true)
         }
         swKeyAuth.setOnCheckedChangeListener { _, checked ->
-            prefs.keyAuthEnabled = checked
-            snack("ล็อกอินด้วยคีย์${if (checked) "เปิดแล้ว" else "ปิดแล้ว"} — มีผลครั้งถัดไป")
+            if (suppressSwitch) return@setOnCheckedChangeListener
+            applyKeyAuth(checked, showUndo = true)
         }
 
         findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveForm() }
@@ -128,8 +129,62 @@ class MainActivity : AppCompatActivity() {
         refreshGuest()
     }
 
+    private fun setSwitchSilent(sw: SwitchMaterial, checked: Boolean) {
+        suppressSwitch = true
+        sw.isChecked = checked
+        suppressSwitch = false
+    }
+
+    private fun applyRoot(checked: Boolean, showUndo: Boolean) {
+        prefs.rootMode = checked
+        refreshStatus()
+        val msg = "สลับเป็น${if (checked) "โหมดรูท (:22)" else "โหมดทั่วไป (:2222)"} — มีผลครั้งถัดไปที่เปิด SSH"
+        if (!showUndo) {
+            snack(msg)
+            return
+        }
+        Snackbar.make(root, msg, Snackbar.LENGTH_LONG).setAction("เลิกทำ") {
+            setSwitchSilent(swRoot, !checked)
+            applyRoot(!checked, showUndo = false)
+        }.show()
+    }
+
+    private fun applyAuto(checked: Boolean, showUndo: Boolean) {
+        prefs.autoStart = checked
+        if (checked) SshService.scheduleKeepAlive(this)
+        val msg = if (checked) "เปิดการเริ่มอัตโนมัติแล้ว" else "ปิดการเริ่มอัตโนมัติแล้ว"
+        if (!showUndo) {
+            snack(msg)
+            return
+        }
+        Snackbar.make(root, msg, Snackbar.LENGTH_LONG).setAction("เลิกทำ") {
+            setSwitchSilent(swAuto, !checked)
+            applyAuto(!checked, showUndo = false)
+        }.show()
+    }
+
+    private fun applyKeyAuth(checked: Boolean, showUndo: Boolean) {
+        prefs.keyAuthEnabled = checked
+        val msg = "ล็อกอินด้วยคีย์${if (checked) "เปิดแล้ว" else "ปิดแล้ว"} — มีผลครั้งถัดไป"
+        if (!showUndo) {
+            snack(msg)
+            return
+        }
+        Snackbar.make(root, msg, Snackbar.LENGTH_LONG).setAction("เลิกทำ") {
+            setSwitchSilent(swKeyAuth, !checked)
+            applyKeyAuth(!checked, showUndo = false)
+        }.show()
+    }
+
     private fun refreshGuest() {
-        tvGuest.text = GuestManager.statusText(this)
+        val base = GuestManager.statusText(this)
+        tvGuest.text = if (!GuestManager.isInstalled(this) &&
+            GuestManager.supportedAbi() != null && !ShellEnv.suAvailable()
+        ) {
+            base + "\nต้องใช้ root (สำหรับ mount) — อนุญาตรูทให้แอปก่อน"
+        } else {
+            base
+        }
         btnGuest.isEnabled = !GuestManager.isInstalled(this) && GuestManager.supportedAbi() != null
     }
 
