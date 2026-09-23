@@ -15,7 +15,7 @@ import java.util.zip.ZipInputStream
 
 /**
  * Debian guest (apt จาก Debian ตรงๆ) รันแบบ chroot + bind mounts — ต้องใช้ root
- * (mount) เหมือนเดิมทุกอย่าง แค่เปลี่ยน rootfs จาก Termux เป็น Debian
+ * (mount) เหมือนเดิมทุกอย่าง
  *
  * เข้าใช้งาน: พิมพ์ `dlogin` ใน SSH (root ใน guest, apt ใช้งานได้ปกติ)
  */
@@ -156,7 +156,7 @@ object GuestManager {
                 emptyList()
             }
             val servers = if (dns.isEmpty()) listOf("8.8.8.8", "1.1.1.1") else dns
-            // Debian ใช้ /etc มาตรฐาน (ไม่ใช่ prefix แบบ Termux)
+            // Debian ใช้ /etc มาตรฐานของตัวเอง
             val etc = File(guestDir(app), "etc").apply { mkdirs() }
             File(etc, "resolv.conf").writeText(servers.joinToString("\n", postfix = "\n") { "nameserver $it" })
         } catch (e: Exception) {
@@ -169,7 +169,7 @@ object GuestManager {
             val app = ctx.applicationContext
             val g = guestDir(app).absolutePath
             val bin = File(ShellEnv.homeDir(app), "bin").apply { mkdirs() }
-            // ลบ wrapper เก่าของ termux guest ทิ้ง (กันสับสน)
+            // ลบ wrapper เก่าทิ้ง (กันสับสนกับเวอร์ชันก่อน)
             File(bin, "tlogin").delete()
             File(bin, "tlogin-root").delete()
             val d = D

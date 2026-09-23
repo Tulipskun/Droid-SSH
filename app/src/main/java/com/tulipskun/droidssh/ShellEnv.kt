@@ -6,7 +6,7 @@ import java.io.File
 import java.nio.file.Files
 
 /**
- * Workspace แบบ Termux: HOME ของตัวเอง + env ครบ + rc เริ่มต้น
+ * Workspace ส่วนตัว: HOME ของตัวเอง + env ครบ + rc เริ่มต้น
  * - HOME = <filesDir>/home (เขียนได้เสมอ, ไม่ต้องพึ่ง /sdcard)
  * - ENV -> ~/.droidrc (dash/mksh จะ source ให้ shell interactive อัตโนมัติ)
  */
@@ -61,7 +61,7 @@ object ShellEnv {
         return env.map { (k, v) -> "$k=$v" }.toTypedArray()
     }
 
-    /** ~/storage -> /sdcard แบบ Termux (best-effort: เข้าถึงได้จริงเมื่อแอปได้สิทธิ์ไฟล์) */
+    /** ~/storage -> /sdcard (best-effort: เข้าถึงได้จริงเมื่อแอปได้สิทธิ์ไฟล์) */
     private fun ensureStorageLink(home: File) {
         try {
             val sdcard = File("/sdcard")

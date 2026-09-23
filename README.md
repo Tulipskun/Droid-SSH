@@ -4,12 +4,12 @@
 
 - Shell ผ่าน **PTY จริง** + one-shot exec (`ssh user@host "cmd"`) + SFTP (Apache MINA SSHD)
 - Login: password (เก็บเป็น SHA-256+salt) + public key (`authorized_keys`: ssh-rsa/ecdsa/ed25519) พร้อมกัน
-- SFTP เปิดมาอยู่ home (`~/`) แบบ Termux, absolute path ยังเห็นทั้งเครื่อง, มี `~/storage` -> /sdcard
+- SFTP เปิดมาอยู่ home (`~/`), absolute path ยังเห็นทั้งเครื่อง, มี `~/storage` -> /sdcard
 - Port: **22** (root mode, NAT อัตโนมัติ) / **2222** (non-root) + fallback อัตโนมัติถ้า bind ไม่ได้
 - Auto startup: `BOOT_COMPLETED / MY_PACKAGE_REPLACED / QUICKBOOT` + `directBootAware`
 - Keep alive: ForegroundService (`START_STICKY`) + notification, WifiLock/WakeLock, WorkManager 15 นาที, restart เมื่อ swipe ทิ้ง (กด “หยุด SSH” = หยุดจริง ไม่ restart เอง)
 - ตั้งค่าในแอป: username/password, root switch, auto-start switch, วาง public key,
-  ปุ่มขอ ignore battery + all-files access + ปุ่มติดตั้ง Termux guest
+  ปุ่มขอ ignore battery + all-files access + ปุ่มติดตั้ง Debian guest
 
 ## Root mode (ต้อง grant root ใน KernelSU/Magisk ก่อน)
 
@@ -49,7 +49,7 @@ ssh droid@<ip-มือถือ> -p 2222 "ls /sdcard"  # one-shot exec
 sftp -P 2222 droid@<ip>
 ```
 
-## Workspace แบบ Termux
+## Workspace ส่วนตัว
 
 - Shell ได้ **PTY จริง** (JNI forkpty) — มี tty, job control, `vim`/`top`/`stty` ใช้ได้ ไม่มี warning
 - เข้า shell แล้วอยู่ `~/home` ของแอปทันที (`/data/data/.../files/home`)

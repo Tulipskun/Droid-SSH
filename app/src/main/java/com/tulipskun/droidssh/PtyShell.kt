@@ -71,6 +71,7 @@ private class PtyCommand(
 
     @Volatile private var masterFd: Int = -1
     @Volatile private var childPid: Int = -1
+    @Volatile private var destroyed = false
     @Volatile private var cols: Int = 80
     @Volatile private var rows: Int = 24
 
@@ -127,11 +128,17 @@ private class PtyCommand(
             if (fd < 0) throw java.io.IOException("forkPty failed, errno=${-fd}")
             masterFd = fd
             childPid = pidOut[0]
-            val tIn = thread(isDaemon = true) { pumpClientToPty() }
-            val tOut = thread(isDaemon = true) { pumpPtyToClient() }
-            code = PtyNative.ptyWait(childPid)
-            tIn.join(2000)
-            tOut.join(2000)
+            if (destroyed) {
+                // destroy() มาก่อน fork เสร็จ -> ฆ่าเด็กทันที กัน zombie
+                try { PtyNative.ptyKill(childPid, 9) } catch (_: Exception) {}
+                code = 143
+            } else {
+                val tIn = thread(isDaemon = true) { pumpClientToPty() }
+                val tOut = thread(isDaemon = true) { pumpPtyToClient() }
+                code = PtyNative.ptyWait(childPid)
+                tIn.join(2000)
+                tOut.join(2000)
+            }
         } catch (t: Throwable) {
             Log.w(TAG, "pty shell: ${t.message}")
             try { output?.write("shell failed: ${t.message}\n".toByteArray()) } catch (_: Exception) {}
@@ -180,6 +187,7 @@ private class PtyCommand(
     }
 
     override fun destroy(channel: ChannelSession) {
+        destroyed = true
         try {
             val pid = childPid
             Log.i(TAG, "destroy pid=$pid")
