@@ -190,15 +190,19 @@ object GuestManager {
         val g = guestDir(app).absolutePath
         val d = D
 
-        // 1) openssh-server (ข้ามถ้ามีแล้ว)
+        // 1) openssh-server (ข้ามถ้ามีแล้ว; postinst บางตัวค้างใน chroot ได้ -> ครอบ timeout ทุกชั้น)
         val (_, out) = suSh(app.applicationContext.filesDir, "[ -x \"$g/usr/sbin/sshd\" ] && echo HAVE || echo MISSING")
         if (out.trim() == "MISSING") {
-            val (irc, iout) = suSh(app.applicationContext.filesDir,
+            val (irc, iout) = suSh(
+                app.applicationContext.filesDir,
                 "chroot \"$g\" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin " +
+                    "DEBIAN_FRONTEND=noninteractive dpkg --configure -a >/dev/null 2>&1; " +
+                    "timeout 240 chroot \"$g\" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin " +
                     "DEBIAN_FRONTEND=noninteractive apt-get update -o Acquire::AllowInsecureRepositories=false 2>&1 | tail -n 2; " +
-                    "chroot \"$g\" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin " +
+                    "timeout 500 chroot \"$g\" /usr/bin/env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin " +
                     "DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server 2>&1 | tail -n 3; " +
-                    "[ -x \"$g/usr/sbin/sshd\" ]"
+                    "[ -x \"$g/usr/sbin/sshd\" ]",
+                timeoutSec = 780
             )
             if (irc != 0) throw IllegalStateException("ติดตั้ง openssh-server ไม่สำเร็จ: ${iout.trim().take(200)}")
         }
@@ -280,14 +284,26 @@ object GuestManager {
         }
     }
 
-    /** รัน shell script 1 ชุดผ่าน su — คืน (exit code, output รวม) */
-    private fun suSh(tmpDir: File, script: String): Pair<Int, String> {
+    /** รัน shell script 1 ชุดผ่าน su — คืน (exit code, output รวม). เกิน timeout ฆ่าทิ้งคืน 124. */
+    private fun suSh(tmpDir: File, script: String, timeoutSec: Long = 180): Pair<Int, String> {
         val f = File.createTempFile("droid-su", ".sh", tmpDir).apply { writeText(script) }
         return try {
             val p = ProcessBuilder("su", "-c", "sh ${f.absolutePath}")
                 .redirectErrorStream(true).start()
-            val out = p.inputStream.bufferedReader().readText()
-            p.waitFor() to out
+            val finished = p.waitFor(timeoutSec, java.util.concurrent.TimeUnit.SECONDS)
+            if (!finished) {
+                try {
+                    p.destroyForcibly()
+                } catch (_: Exception) {
+                }
+                return 124 to "su timeout ${timeoutSec}s"
+            }
+            val out = try {
+                p.inputStream.bufferedReader().readText()
+            } catch (_: Exception) {
+                ""
+            }
+            p.exitValue() to out
         } finally {
             f.delete()
         }
