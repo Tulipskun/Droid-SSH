@@ -21,10 +21,10 @@ import java.util.zip.ZipInputStream
  */
 object GuestManager {
     private const val TAG = "GuestManager"
-    const val GUEST_VERSION = "debian-1"
-    private const val RELEASE_TAG = "debian-12-guest-v1"
+    const val GUEST_VERSION = "debian13-1"
+    private const val RELEASE_TAG = "debian-13-guest-v1"
 
-    private val GUEST_ZIP = mapOf("arm64-v8a" to "debian-guest-12-aarch64.zip")
+    private val GUEST_ZIP = mapOf("arm64-v8a" to "debian-guest-13-aarch64.zip")
 
     fun guestDir(ctx: Context): File = File(ctx.applicationContext.filesDir, "guest")
 
