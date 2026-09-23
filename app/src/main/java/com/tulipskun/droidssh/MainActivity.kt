@@ -15,6 +15,8 @@ import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
@@ -47,8 +49,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        // insets จัดการผ่าน android:fitsSystemWindows ใน layout
-        // (CoordinatorLayout/AppBarLayout/NestedScrollView จัดการเอง)
+        // บน: AppBarLayout จัดการผ่าน fitsSystemWindows ใน layout
+        // ล่าง: เติม padding ให้ scrollview เอง (CoordinatorLayout ไม่ส่ง inset มาถึง)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.scroll)) { v, insets ->
+            val bottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottom)
+            insets
+        }
         prefs = Prefs(this)
 
         root = findViewById(R.id.root)
