@@ -131,7 +131,7 @@ object GuestManager {
                 sb.appendLine("grep -q \" $g/$dst \" /proc/mounts || mount $opts \"$src\" \"$g/$dst\" || { echo \"mount $dst failed\"; ok=0; }")
             }
             sb.appendLine("ok=1")
-            sb.appendLine("mkdir -p $g/system $g/vendor $g/apex $g/dev $g/proc $g/sys $g/sdcard $g/linkerconfig")
+            sb.appendLine("mkdir -p $g/system $g/vendor $g/apex $g/dev/pts $g/proc $g/sys $g/sdcard $g/linkerconfig")
             m("/system", "system")
             m("/vendor", "vendor")
             sb.appendLine("grep -q \" $g/apex \" /proc/mounts || mount --rbind /apex \"$g/apex\" || { echo 'mount apex failed'; ok=0; }")
