@@ -136,6 +136,7 @@ object GuestManager {
             m("/vendor", "vendor")
             sb.appendLine("grep -q \" $g/apex \" /proc/mounts || mount --rbind /apex \"$g/apex\" || { echo 'mount apex failed'; ok=0; }")
             m("/dev", "dev")
+            sb.appendLine("grep -q \" $g/dev/pts \" /proc/mounts || mount -t devpts devpts \"$g/dev/pts\" || { echo 'mount devpts failed'; ok=0; }")
             sb.appendLine("grep -q \" $g/proc \" /proc/mounts || mount -t proc proc \"$g/proc\" || { echo 'mount proc failed'; ok=0; }")
             sb.appendLine("grep -q \" $g/sys \" /proc/mounts || mount -t sysfs sys \"$g/sys\" || { echo 'mount sys failed'; ok=0; }")
             m("/sdcard", "sdcard")
