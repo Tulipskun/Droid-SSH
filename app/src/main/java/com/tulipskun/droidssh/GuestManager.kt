@@ -46,6 +46,30 @@ object GuestManager {
         else -> "ยังไม่ติดตั้ง (โหลด ~100MB ครั้งเดียว)"
     }
 
+    /** โฟลเดอร์เปล่าที่ apt/dpkg ต้องใช้ (zip ไม่เก็บโฟลเดอร์เปล่า) — เรียกทุกครั้งที่สตาร์ท */
+    fun ensureGuestDirs(ctx: Context) {
+        try {
+            val g = guestDir(ctx.applicationContext)
+            if (!File(g, ".guest-version").exists()) return
+            val dirs = listOf(
+                "var/lib/apt/lists/partial",
+                "var/cache/apt/archives/partial",
+                "var/lib/dpkg/updates",
+                "var/lib/dpkg/info",
+                "var/lib/dpkg/alternatives",
+                "var/log/apt",
+                "etc/apt/apt.conf.d",
+                "etc/apt/sources.list.d",
+                "tmp",
+            )
+            for (d in dirs) File(g, d).mkdirs()
+            val status = File(g, "var/lib/dpkg/status")
+            if (!status.exists()) status.writeText("")
+        } catch (e: Exception) {
+            Log.w(TAG, "guest dirs: ${e.message}")
+        }
+    }
+
     /** blocking — เรียกนอก main thread. progress(downloadedBytes, totalBytes; total=-1 ถ้าไม่รู้) */
     fun install(ctx: Context, progress: (Long, Long) -> Unit): Result<Unit> {
         val app = ctx.applicationContext
@@ -64,6 +88,7 @@ object GuestManager {
             }
             chmod(drop)
             File(guestDir(app), ".guest-version").writeText(GUEST_VERSION.toString())
+            ensureGuestDirs(app)
             writeResolvConf(app)
             writeLoginWrappers(app)
             Result.success(Unit)

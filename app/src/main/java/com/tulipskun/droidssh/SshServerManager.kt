@@ -57,6 +57,7 @@ object SshServerManager {
         // Termux guest: รีเฟรช wrapper + mount ใหม่ทุกครั้งที่สตาร์ท (mount หายหลังรีบูต)
         if (GuestManager.isInstalled(app)) {
             try {
+                GuestManager.ensureGuestDirs(app)
                 GuestManager.writeLoginWrappers(app)
                 GuestManager.writeResolvConf(app)
                 GuestManager.ensureMounts(app)
