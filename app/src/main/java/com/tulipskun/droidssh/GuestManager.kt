@@ -51,6 +51,9 @@ object GuestManager {
         try {
             val g = guestDir(ctx.applicationContext)
             if (!File(g, ".guest-version").exists()) return
+            // NOTE: path ใต้ usr/ ของ guest (เช่น <guest>/data/data/.../usr/var/...)
+            // ไม่ใช่ <guest>/var ตรงๆ
+            val u = File(g, "data/data/com.termux/files/usr")
             val dirs = listOf(
                 "var/lib/apt/lists/partial",
                 "var/cache/apt/archives/partial",
@@ -62,8 +65,8 @@ object GuestManager {
                 "etc/apt/sources.list.d",
                 "tmp",
             )
-            for (d in dirs) File(g, d).mkdirs()
-            val status = File(g, "var/lib/dpkg/status")
+            for (d in dirs) File(u, d).mkdirs()
+            val status = File(u, "var/lib/dpkg/status")
             if (!status.exists()) status.writeText("")
         } catch (e: Exception) {
             Log.w(TAG, "guest dirs: ${e.message}")
@@ -144,7 +147,8 @@ object GuestManager {
                 emptyList()
             }
             val servers = if (dns.isEmpty()) listOf("8.8.8.8", "1.1.1.1") else dns
-            val etc = File(guestDir(app), "etc").apply { mkdirs() }
+            // resolv.conf ของ guest อยู่ที่ <guest>/data/.../usr/etc (ไม่ใช่ <guest>/etc)
+            val etc = File(guestDir(app), "data/data/com.termux/files/usr/etc").apply { mkdirs() }
             File(etc, "resolv.conf").writeText(servers.joinToString("\n", postfix = "\n") { "nameserver $it" })
         } catch (e: Exception) {
             Log.w(TAG, "resolv: ${e.message}")
