@@ -100,8 +100,9 @@ object GuestManager {
     fun ensureExecPerms(ctx: Context) {
         try {
             val g = guestDir(ctx.applicationContext)
-            for (d in listOf("bin", "sbin", "usr/bin", "usr/sbin", "lib", "lib64")) {
-                File(g, d).listFiles()?.forEach { chmod(it) }
+            // Debian merged-usr: ของจริงอยู่ usr/bin, usr/sbin; bin/sbin/lib* เป็น symlink
+            for (d in listOf("bin", "sbin", "usr/bin", "usr/sbin", "lib", "lib64", "usr/lib/apt/methods")) {
+                File(g, d).listFiles()?.forEach { if (it.isFile) chmod(it) }
             }
         } catch (e: Exception) {
             Log.w(TAG, "exec perms: ${e.message}")
