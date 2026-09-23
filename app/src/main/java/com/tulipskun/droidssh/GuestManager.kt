@@ -76,11 +76,14 @@ object GuestManager {
                 "var/log/apt",
                 "etc/apt/apt.conf.d",
                 "etc/apt/sources.list.d",
+                "etc/apt/preferences.d",
                 "tmp",
             )
             for (d in dirs) File(u, d).mkdirs()
             val status = File(u, "var/lib/dpkg/status")
             if (!status.exists()) status.writeText("")
+            // apt cache ของ Termux อยู่นอก prefix: <guest>/data/data/com.termux/cache/...
+            File(g, "data/data/com.termux/cache/apt/archives/partial").mkdirs()
         } catch (e: Exception) {
             Log.w(TAG, "guest dirs: ${e.message}")
         }
