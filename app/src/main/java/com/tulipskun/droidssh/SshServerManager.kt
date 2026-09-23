@@ -58,6 +58,7 @@ object SshServerManager {
         if (GuestManager.isInstalled(app)) {
             try {
                 GuestManager.ensureGuestDirs(app)
+                GuestManager.ensureExecPerms(app)
                 GuestManager.writeLoginWrappers(app)
                 GuestManager.writeResolvConf(app)
                 GuestManager.ensureMounts(app)

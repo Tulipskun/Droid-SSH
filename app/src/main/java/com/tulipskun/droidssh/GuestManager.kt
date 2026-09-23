@@ -46,6 +46,19 @@ object GuestManager {
         else -> "ยังไม่ติดตั้ง (โหลด ~100MB ครั้งเดียว)"
     }
 
+    /** ไฟล์รันได้ใน guest (unzip ไม่เก็บ permission) — เรียกทุกครั้งที่สตาร์ท */
+    fun ensureExecPerms(ctx: Context) {
+        try {
+            val u = File(guestDir(ctx.applicationContext), "data/data/com.termux/files/usr")
+            for (d in listOf("bin", "libexec", "lib/apt/methods")) {
+                File(u, d).listFiles()?.forEach { chmod(it) }
+            }
+            chmod(File(guestDir(ctx.applicationContext), "droproot"))
+        } catch (e: Exception) {
+            Log.w(TAG, "exec perms: ${e.message}")
+        }
+    }
+
     /** โฟลเดอร์เปล่าที่ apt/dpkg ต้องใช้ (zip ไม่เก็บโฟลเดอร์เปล่า) — เรียกทุกครั้งที่สตาร์ท */
     fun ensureGuestDirs(ctx: Context) {
         try {
@@ -95,6 +108,7 @@ object GuestManager {
             chmod(drop)
             File(guestDir(app), ".guest-version").writeText(GUEST_VERSION.toString())
             ensureGuestDirs(app)
+            ensureExecPerms(app)
             writeResolvConf(app)
             writeLoginWrappers(app)
             Result.success(Unit)
