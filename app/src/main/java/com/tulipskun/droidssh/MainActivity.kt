@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var swKeyAuth: SwitchMaterial
     private lateinit var statusCard: MaterialCardView
     private lateinit var tvStatus: TextView
+    private lateinit var tvGuest: TextView
+    private lateinit var btnGuest: MaterialButton
     private var lastConnectCmd: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +66,8 @@ class MainActivity : AppCompatActivity() {
         swKeyAuth = findViewById(R.id.swKeyAuth)
         statusCard = findViewById(R.id.statusCard)
         tvStatus = findViewById(R.id.tvStatus)
+        tvGuest = findViewById(R.id.tvGuest)
+        btnGuest = findViewById(R.id.btnGuest)
 
         loadForm()
         requestNotifPermission()
@@ -105,6 +109,8 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.btnBattery).setOnClickListener { openBatterySettings() }
         findViewById<MaterialButton>(R.id.btnStorage).setOnClickListener { openStorageSettings() }
+        refreshGuest()
+        btnGuest.setOnClickListener { installGuest() }
         findViewById<MaterialButton>(R.id.btnCopy).setOnClickListener {
             if (lastConnectCmd.isEmpty()) {
                 snack("ยังไม่มีคำสั่งเชื่อมต่อ (เปิด SSH ก่อน)")
@@ -119,6 +125,46 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         refreshStatus()
+        refreshGuest()
+    }
+
+    private fun refreshGuest() {
+        tvGuest.text = GuestManager.statusText(this)
+        btnGuest.isEnabled = !GuestManager.isInstalled(this) && GuestManager.supportedAbi() != null
+    }
+
+    /** ติดตั้ง Termux guest (โหลด ~100MB) — รันนอก main thread พร้อม progress */
+    private fun installGuest() {
+        if (!ShellEnv.suAvailable()) {
+            snack("guest ต้องใช้ root (mount) — อนุญาตรูทใน KernelSU ก่อน")
+            return
+        }
+        btnGuest.isEnabled = false
+        tvGuest.text = "กำลังเริ่มดาวน์โหลด..."
+        Thread({
+            val r = GuestManager.install(this) { done, total ->
+                runOnUiThread {
+                    tvGuest.text = if (total > 0) {
+                        "กำลังดาวน์โหลด ${done / 1024 / 1024} / ${total / 1024 / 1024} MB"
+                    } else {
+                        "กำลังดาวน์โหลด ${done / 1024 / 1024} MB"
+                    }
+                }
+            }
+            runOnUiThread {
+                r.onSuccess {
+                    val mounted = GuestManager.ensureMounts(this)
+                    refreshGuest()
+                    snack(
+                        if (mounted) "ติดตั้งเสร็จ — พิมพ์ tlogin ใน SSH เพื่อเข้า guest"
+                        else "ติดตั้งเสร็จ แต่ mount ไม่ครบ — ลองกดเปิด SSH ใหม่อีกครั้ง"
+                    )
+                }.onFailure { e ->
+                    refreshGuest()
+                    snack("ติดตั้งไม่สำเร็จ: ${e.message}")
+                }
+            }
+        }, "guest-install").start()
     }
 
     private fun loadForm() {

@@ -198,6 +198,23 @@
                 android:layout_height="wrap_content"
                 android:text="ขอสิทธิ์เข้าถึงไฟล์ (สำหรับ SFTP)" />
 
+            <TextView
+                style="@style/SectionHeader"
+                android:text="Termux guest (apt/pkg)" />
+
+            <TextView
+                android:id="@+id/tvGuest"
+                style="@style/SectionHint"
+                android:text="ยังไม่ติดตั้ง" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGuest"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="ติดตั้ง Termux guest" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
