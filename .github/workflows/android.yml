@@ -88,6 +88,33 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 Droid-SSH.apk
 
+      - name: Delete previous app releases (keep guest rootfs tags)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release list --limit 100 --json tagName --jq '.[].tagName' |
+          while read -r tag; do
+            [ -z "$tag" ] && continue
+            [ "$tag" = "$NEW_TAG" ] && continue
+            case "$tag" in *-guest-v*) continue;; esac
+            gh release view "$tag" >/dev/null 2>&1 && gh release delete "$tag" --yes --cleanup-tag || true
+          done
+
+      - name: Delete previous app tags (keep guest rootfs tags)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git ls-remote --refs --tags origin |
+          sed 's#refs/tags/##' |
+          while read -r tag; do
+            [ -z "$tag" ] && continue
+            [ "$tag" = "$NEW_TAG" ] && continue
+            case "$tag" in *-guest-v*) continue;; esac
+            git push origin --delete "$tag" || true
+          done
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
