@@ -32,6 +32,10 @@ object SshServerManager {
         private set
     @Volatile var lastError: String? = null
         private set
+    /** สถานะ sshd ใน Debian guest (null = ไม่ได้เปิด) */
+    @Volatile var debianStatus: String? = null
+        private set
+    @Volatile private var appCtx: Context? = null
 
     val isRunning: Boolean get() = started && server != null
 
@@ -76,13 +80,14 @@ object SshServerManager {
         }
 
         // Guest (Debian): รีเฟรช wrapper + mount ใหม่ทุกครั้งที่สตาร์ท (mount หายหลังรีบูต)
+        // + เปิด sshd ตรงจากใน Debian (:2223) ถ้าตั้งค่าไว้ — พังก็แค่ log ห้ามล้ม sshd หลัก
         if (GuestManager.isInstalled(app)) {
             try {
                 GuestManager.ensureGuestDirs(app)
                 GuestManager.ensureExecPerms(app)
                 GuestManager.writeLoginWrappers(app)
                 GuestManager.writeResolvConf(app)
-                GuestManager.ensureMounts(app)
+                GuestManager.ensureMounts(app, ShellEnv.homeDir(app).absolutePath)
             } catch (e: Exception) {
                 Log.w(TAG, "guest setup: ${e.message}")
             }
@@ -104,7 +109,28 @@ object SshServerManager {
                 server = s
                 started = true
                 runningPort = port
+                appCtx = app
                 Log.i(TAG, "sshd started on port $port root=${prefs.rootMode}")
+                // Debian sshd ตรง (:2223) — ทำหลัง bind หลักสำเร็จ, พังก็แค่ log
+                if (GuestManager.isInstalled(app) && prefs.debianSshEnabled && ShellEnv.suAvailable()) {
+                    try {
+                        val keys = try {
+                            prefs.authorizedKeysFile(app).takeIf { it.exists() }?.readText().orEmpty()
+                        } catch (_: Exception) {
+                            ""
+                        }
+                        debianStatus = GuestManager.ensureDebianSshd(
+                            app, prefs.debianPassword(), keys,
+                            ShellEnv.homeDir(app).absolutePath
+                        )
+                        Log.i(TAG, "debian sshd: $debianStatus")
+                    } catch (e: Exception) {
+                        debianStatus = "Debian SSH เปิดไม่สำเร็จ: ${e.message}"
+                        Log.w(TAG, "debian sshd: ${e.message}")
+                    }
+                } else {
+                    debianStatus = null
+                }
                 return port
             } catch (e: Throwable) {
                 // BindException (port 22 ไม่มีสิทธิ์/root ไม่อนุญาต) -> ลอง port ถัดไป
@@ -134,6 +160,14 @@ object SshServerManager {
             started = false
             server = null
             runningPort = -1
+        }
+        try {
+            appCtx?.let { GuestManager.stopDebianSshd(it) }
+        } catch (e: Throwable) {
+            Log.w(TAG, "debian stop: ${e.message}")
+        } finally {
+            debianStatus = null
+            appCtx = null
         }
     }
 

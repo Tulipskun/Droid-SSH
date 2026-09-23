@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvGuest: TextView
     private lateinit var btnGuest: MaterialButton
     private var lastConnectCmd: String = ""
+    private var lastDebianCmd: String = ""
     // กัน listener วนซ้ำตอนกด "เลิกทำ" (setChecked โปรแกรมมาติก)
     private var suppressSwitch = false
 
@@ -112,6 +113,15 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnStorage).setOnClickListener { openStorageSettings() }
         refreshGuest()
         btnGuest.setOnClickListener { installGuest() }
+        findViewById<MaterialButton>(R.id.btnCopyDebian).setOnClickListener {
+            if (lastDebianCmd.isEmpty()) {
+                snack("ยังไม่มีคำสั่ง Debian (เปิด SSH + ต่อ Wi-Fi ก่อน)")
+                return@setOnClickListener
+            }
+            val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("debian-ssh", lastDebianCmd))
+            snack("คัดลอกคำสั่ง Debian แล้ว (รหัสอยู่ในกล่องด้านบน)")
+        }
         findViewById<MaterialButton>(R.id.btnCopy).setOnClickListener {
             if (lastConnectCmd.isEmpty()) {
                 snack("ยังไม่มีคำสั่งเชื่อมต่อ (เปิด SSH ก่อน)")
@@ -178,14 +188,27 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshGuest() {
         val base = GuestManager.statusText(this)
-        tvGuest.text = if (!GuestManager.isInstalled(this) &&
-            GuestManager.supportedAbi() != null && !ShellEnv.suAvailable()
-        ) {
-            base + "\nต้องใช้ root (สำหรับ mount) — อนุญาตรูทให้แอปก่อน"
-        } else {
-            base
+        val sb = StringBuilder(base)
+        var debianReady = false
+        if (GuestManager.isInstalled(this)) {
+            if (!ShellEnv.suAvailable()) {
+                sb.append("\nต้องใช้ root (สำหรับ mount/sshd) — อนุญาตรูทให้แอปก่อน")
+            } else {
+                val ip = NetUtils.getDeviceIps(this).firstOrNull().orEmpty()
+                val pw = prefs.debianPassword()
+                lastDebianCmd = if (ip.isEmpty()) "" else "ssh root@$ip -p ${Prefs.PORT_DEBIAN}"
+                val st = SshServerManager.debianStatus
+                sb.append("\nDebian SSH ตรง: ${st ?: "จะเปิดอัตโนมัติตอนกด “เปิด SSH”"}")
+                sb.append("\nคำสั่ง: ${lastDebianCmd.ifEmpty { "ssh root@<IP> -p ${Prefs.PORT_DEBIAN} (ต่อ Wi-Fi ก่อน)" }}")
+                sb.append("\nรหัสผ่าน root (Debian): $pw")
+                sb.append("\nใน Debian เห็นไฟล์ Android ที่ /sdcard กับ /mnt/droid-home")
+                debianReady = lastDebianCmd.isNotEmpty()
+            }
         }
+        tvGuest.text = sb.toString()
         btnGuest.isEnabled = !GuestManager.isInstalled(this) && GuestManager.supportedAbi() != null
+        findViewById<MaterialButton>(R.id.btnCopyDebian).visibility =
+            if (debianReady) View.VISIBLE else View.GONE
     }
 
     /** ติดตั้ง Debian guest (โหลด ~65MB) — รันนอก main thread พร้อม progress */

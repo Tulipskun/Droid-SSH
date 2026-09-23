@@ -88,6 +88,28 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_KEYAUTH, true)
         set(v) = sp.edit().putBoolean(KEY_KEYAUTH, v).apply()
 
+    /** เปิด sshd ตรงจากใน Debian guest (port 2223) */
+    var debianSshEnabled: Boolean
+        get() = sp.getBoolean(KEY_DEBIAN_SSH, true)
+        set(v) = sp.edit().putBoolean(KEY_DEBIAN_SSH, v).apply()
+
+    /**
+     * รหัสผ่าน root ของ Debian sshd (แยกจากรหัสหลัก — ตัวหลักเก็บแค่ hash จึง sync ไม่ได้).
+     * สร้างแบบสุ่มครั้งแรกที่ใช้ (a-zA-Z0-9 ล้วน ปลอดภัยต่อ shell quoting ตอน chpasswd).
+     */
+    fun debianPassword(): String {
+        sp.getString(KEY_DEBIAN_PASS, null)?.takeIf { it.length >= 8 }?.let { return it }
+        return regenerateDebianPassword()
+    }
+
+    fun regenerateDebianPassword(): String {
+        val chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
+        val r = SecureRandom()
+        val pw = (1..12).map { chars[r.nextInt(chars.length)] }.joinToString("")
+        sp.edit().putString(KEY_DEBIAN_PASS, pw).apply()
+        return pw
+    }
+
     /**
      * true = ผู้ใช้กด "หยุด SSH" เอง -> ระบบห้าม auto-restart ทุกช่องทาง
      * จนกว่าผู้ใช้จะกด "เปิด SSH" (ซึ่งจะล้าง flag นี้)
@@ -105,6 +127,7 @@ class Prefs(context: Context) {
     companion object {
         const val PORT_ROOT = 22
         const val PORT_NONROOT = 2222
+        const val PORT_DEBIAN = 2223
 
         private const val KEY_USER = "username"
         private const val KEY_PASS = "password" // legacy plaintext (migrate อัตโนมัติ)
@@ -113,6 +136,8 @@ class Prefs(context: Context) {
         private const val KEY_ROOT = "root_mode"
         private const val KEY_AUTOSTART = "auto_start"
         private const val KEY_KEYAUTH = "key_auth"
+        private const val KEY_DEBIAN_SSH = "debian_ssh"
+        private const val KEY_DEBIAN_PASS = "debian_password"
         private const val KEY_USER_STOPPED = "user_stopped"
         private const val KEY_FAIL_COUNT = "start_fail_count"
         private const val KEY_LAST_FAIL = "start_last_fail"
