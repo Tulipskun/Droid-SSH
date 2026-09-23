@@ -54,6 +54,27 @@ object SshServerManager {
         OsUtils.setAndroid(true)
         System.setProperty(OsUtils.CURRENT_USER_OVERRIDE_PROP, prefs.username.ifBlank { "droid" })
 
+        // Root mode: เปิด NAT 22->2222 ผ่าน iptables (idempotent) เพื่อให้ ssh -p 22
+        // ใช้งานได้จริง (แอป bind port <1024 ตรงๆ ไม่ได้) — ต้อง grant root ก่อน
+        if (prefs.rootMode && ShellEnv.suAvailable()) {
+            try {
+                val nat = "iptables -t nat -C PREROUTING -p tcp --dport 22 " +
+                    "-j REDIRECT --to-port ${Prefs.PORT_NONROOT} 2>/dev/null || " +
+                    "iptables -t nat -A PREROUTING -p tcp --dport 22 " +
+                    "-j REDIRECT --to-port ${Prefs.PORT_NONROOT}; " +
+                    "iptables -t nat -C OUTPUT -o lo -p tcp --dport 22 " +
+                    "-j REDIRECT --to-port ${Prefs.PORT_NONROOT} 2>/dev/null || " +
+                    "iptables -t nat -A OUTPUT -o lo -p tcp --dport 22 " +
+                    "-j REDIRECT --to-port ${Prefs.PORT_NONROOT}"
+                val p = ProcessBuilder("su", "-c", nat).redirectErrorStream(true).start()
+                val out = p.inputStream.bufferedReader().readText()
+                val rc = p.waitFor()
+                Log.i(TAG, "iptables NAT 22->${Prefs.PORT_NONROOT} rc=$rc $out")
+            } catch (e: Exception) {
+                Log.w(TAG, "iptables: ${e.message}")
+            }
+        }
+
         // Termux guest: รีเฟรช wrapper + mount ใหม่ทุกครั้งที่สตาร์ท (mount หายหลังรีบูต)
         if (GuestManager.isInstalled(app)) {
             try {
