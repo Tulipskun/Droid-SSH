@@ -15,8 +15,6 @@ import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
@@ -49,13 +47,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        // กันคอนเทนต์ถูกแถบสถานะ/แถบนำทางบัง: เผื่อขอบบนให้ toolbar, ขอบล่างให้เนื้อหา
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root)) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            findViewById<View>(R.id.toolbar).setPadding(0, bars.top, 0, 0)
-            findViewById<View>(R.id.scroll).setPadding(0, 0, 0, bars.bottom)
-            insets
-        }
+        // insets จัดการผ่าน android:fitsSystemWindows ใน layout
+        // (CoordinatorLayout/AppBarLayout/NestedScrollView จัดการเอง)
         prefs = Prefs(this)
 
         root = findViewById(R.id.root)
