@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Process
-import android.system.Os
 import android.util.Log
 import java.io.BufferedInputStream
 import java.io.File
@@ -80,23 +79,23 @@ object GuestManager {
         if (!ShellEnv.suAvailable()) return false
         return try {
             val g = guestDir(ctx.applicationContext).absolutePath
-            val sh = buildString {
-                appendLine("G='$g'")
-                appendLine("ok=1")
-                appendLine("m() { grep -q \" \$G/$2 \" /proc/mounts || mount $3 --bind \"$1\" \"$G/$2\" || { echo \"mount $2 failed\"; ok=0; }; }")
-                appendLine("mkdir -p \$G/system \$G/vendor \$G/apex \$G/dev \$G/proc \$G/sys \$G/sdcard \$G/linkerconfig")
-                appendLine("m /system system")
-                appendLine("m /vendor vendor")
-                appendLine("grep -q \" \$G/apex \" /proc/mounts || mount --rbind /apex \$G/apex || { echo 'mount apex failed'; ok=0; }")
-                appendLine("m /dev dev")
-                appendLine("grep -q \" \$G/proc \" /proc/mounts || mount -t proc proc \$G/proc || { echo 'mount proc failed'; ok=0; }")
-                appendLine("grep -q \" \$G/sys \" /proc/mounts || mount -t sysfs sys \$G/sys || { echo 'mount sys failed'; ok=0; }")
-                appendLine("m /sdcard sdcard || true")
-                appendLine("m /linkerconfig linkerconfig || true")
-                appendLine("[ -d \$G/proc/self ] && [ -x \$G/system/bin/sh ] && exit 0 || exit 1")
+            val sb = StringBuilder()
+            fun m(src: String, dst: String, opts: String = "--bind") {
+                sb.appendLine("grep -q \" $g/$dst \" /proc/mounts || mount $opts \"$src\" \"$g/$dst\" || { echo \"mount $dst failed\"; ok=0; }")
             }
+            sb.appendLine("ok=1")
+            sb.appendLine("mkdir -p $g/system $g/vendor $g/apex $g/dev $g/proc $g/sys $g/sdcard $g/linkerconfig")
+            m("/system", "system")
+            m("/vendor", "vendor")
+            sb.appendLine("grep -q \" $g/apex \" /proc/mounts || mount --rbind /apex \"$g/apex\" || { echo 'mount apex failed'; ok=0; }")
+            m("/dev", "dev")
+            sb.appendLine("grep -q \" $g/proc \" /proc/mounts || mount -t proc proc \"$g/proc\" || { echo 'mount proc failed'; ok=0; }")
+            sb.appendLine("grep -q \" $g/sys \" /proc/mounts || mount -t sysfs sys \"$g/sys\" || { echo 'mount sys failed'; ok=0; }")
+            m("/sdcard", "sdcard")
+            m("/linkerconfig", "linkerconfig")
+            sb.appendLine("[ -d $g/proc/self ] && [ -x $g/system/bin/sh ] && exit 0 || exit 1")
             val f = File(ctx.applicationContext.filesDir, "guest-mount.sh")
-            f.writeText(sh)
+            f.writeText(sb.toString())
             val p = ProcessBuilder("su", "-c", "sh ${f.absolutePath}")
                 .redirectErrorStream(true).start()
             val out = p.inputStream.bufferedReader().readText()
@@ -128,13 +127,20 @@ object GuestManager {
         }
     }
 
+    private const val D = "$"
+
     fun writeLoginWrappers(ctx: Context) {
         try {
             val app = ctx.applicationContext
             val g = guestDir(app).absolutePath
             val uid = Process.myUid()
+            // กลุ่มทั้งหมดของแอป (รวม inet) จาก /proc — Os.getgroups() ไม่มีใน SDK
             val groups = try {
-                Os.getgroups().joinToString(",")
+                File("/proc/self/status").readLines()
+                    .firstOrNull { it.startsWith("Groups:") }
+                    ?.substringAfter(":")?.trim()?.split(Regex("\\s+"))
+                    ?.filter { it.isNotEmpty() }?.joinToString(",")
+                    .orEmpty().ifEmpty { "$uid" }
             } catch (_: Exception) {
                 "$uid"
             }
@@ -142,15 +148,16 @@ object GuestManager {
             File(bin, "tlogin").writeText(
                 "#!/system/bin/sh\n" +
                     "# เข้า Termux guest (มี apt/pkg) ในฐานะ user ปกติ\n" +
-                    "GUEST='$g'\n" +
-                    "[ -x \"\$GUEST/droproot\" ] || { echo 'ยังไม่ติดตั้ง guest'; exit 1; }\n" +
-                    "exec su -c \"chroot \\\"$GUEST\\\" /droproot $uid $uid $groups -- $GUEST_TERM_PATH -l\"\n"
+                    "GUEST='" + g + "'\n" +
+                    "[ -x \"" + D + "GUEST/droproot\" ] || { echo 'ยังไม่ติดตั้ง guest'; exit 1; }\n" +
+                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" /droproot " +
+                    uid + " " + uid + " " + groups + " -- " + GUEST_TERM_PATH + " -l\"\n"
             )
             File(bin, "tlogin-root").writeText(
                 "#!/system/bin/sh\n" +
                     "# เข้า Termux guest ในฐานะ root\n" +
-                    "GUEST='$g'\n" +
-                    "exec su -c \"chroot \\\"$GUEST\\\" $GUEST_TERM_PATH -l\"\n"
+                    "GUEST='" + g + "'\n" +
+                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" " + GUEST_TERM_PATH + " -l\"\n"
             )
             chmod(File(bin, "tlogin"))
             chmod(File(bin, "tlogin-root"))
