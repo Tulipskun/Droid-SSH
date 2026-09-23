@@ -41,7 +41,7 @@ object GuestManager {
     fun statusText(ctx: Context): String = when {
         supportedAbi() == null -> "CPU นี้ยังไม่รองรับ Debian guest"
         isInstalled(ctx) -> "ติดตั้งแล้ว — พิมพ์ dlogin ใน SSH เพื่อเข้า Debian (apt)"
-        else -> "ยังไม่ติดตั้ง (โหลด ~65MB ครั้งเดียว)"
+        else -> "ยังไม่ติดตั้ง (โหลด ~50MB ครั้งเดียว)"
     }
 
     /** blocking — เรียกนอก main thread. progress(downloadedBytes, totalBytes; total=-1 ถ้าไม่รู้) */
