@@ -22,7 +22,7 @@ import java.util.zip.ZipInputStream
  */
 object GuestManager {
     private const val TAG = "GuestManager"
-    const val GUEST_VERSION = 1
+    const val GUEST_VERSION = 2
     private const val RELEASE_TAG = "termux-guest-v1"
 
     private val DROPROOT_ASSET = mapOf("arm64-v8a" to "droproot-arm64-v8a")
@@ -78,6 +78,9 @@ object GuestManager {
         val app = ctx.applicationContext
         val abi = supportedAbi() ?: return Result.failure(IllegalStateException("CPU นี้ยังไม่รองรับ"))
         return try {
+            // อัปเกรดเวอร์ชัน: ล้างของเก่าทิ้งก่อน (กันไฟล์ค้างจากเวอร์ชันก่อน)
+            if (guestDir(app).exists()) guestDir(app).deleteRecursively()
+            guestDir(app).mkdirs()
             val url =
                 "https://github.com/Tulipskun/Droid-SSH/releases/download/$RELEASE_TAG/${GUEST_ZIP[abi]}"
             val zip = File(app.filesDir, "guest.zip.tmp")
