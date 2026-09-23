@@ -112,25 +112,7 @@ object SshServerManager {
                 appCtx = app
                 Log.i(TAG, "sshd started on port $port root=${prefs.rootMode}")
                 // Debian sshd ตรง (:2223) — ทำหลัง bind หลักสำเร็จ, พังก็แค่ log
-                if (GuestManager.isInstalled(app) && prefs.debianSshEnabled && ShellEnv.suAvailable()) {
-                    try {
-                        val keys = try {
-                            prefs.authorizedKeysFile(app).takeIf { it.exists() }?.readText().orEmpty()
-                        } catch (_: Exception) {
-                            ""
-                        }
-                        debianStatus = GuestManager.ensureDebianSshd(
-                            app, prefs.debianPassword(), keys,
-                            ShellEnv.homeDir(app).absolutePath
-                        )
-                        Log.i(TAG, "debian sshd: $debianStatus")
-                    } catch (e: Exception) {
-                        debianStatus = "Debian SSH เปิดไม่สำเร็จ: ${e.message}"
-                        Log.w(TAG, "debian sshd: ${e.message}")
-                    }
-                } else {
-                    debianStatus = null
-                }
+                refreshDebianSshd(app)
                 return port
             } catch (e: Throwable) {
                 // BindException (port 22 ไม่มีสิทธิ์/root ไม่อนุญาต) -> ลอง port ถัดไป
@@ -148,6 +130,37 @@ object SshServerManager {
         }
         lastError = lastEx?.message ?: "bind failed"
         throw lastEx ?: BindException("cannot bind $candidates")
+    }
+
+    /**
+     * เปิด/รีเฟรช sshd ใน Debian guest (เรียกได้จาก service start และ KeepAliveWorker).
+     * พังก็แค่ log + คืน null — ห้ามล้ม sshd หลักเด็ดขาด.
+     */
+    @Synchronized
+    fun refreshDebianSshd(context: Context): String? {
+        val app = context.applicationContext
+        val prefs = Prefs(app)
+        if (!GuestManager.isInstalled(app) || !prefs.debianSshEnabled || !ShellEnv.suAvailable()) {
+            debianStatus = null
+            return null
+        }
+        return try {
+            val keys = try {
+                prefs.authorizedKeysFile(app).takeIf { it.exists() }?.readText().orEmpty()
+            } catch (_: Exception) {
+                ""
+            }
+            debianStatus = GuestManager.ensureDebianSshd(
+                app, prefs.debianPassword(), keys,
+                ShellEnv.homeDir(app).absolutePath
+            )
+            Log.i(TAG, "debian sshd: $debianStatus")
+            debianStatus
+        } catch (e: Exception) {
+            debianStatus = "Debian SSH เปิดไม่สำเร็จ: ${e.message}"
+            Log.w(TAG, "debian sshd: ${e.message}")
+            null
+        }
     }
 
     @Synchronized

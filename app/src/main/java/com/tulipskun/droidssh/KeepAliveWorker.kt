@@ -17,6 +17,21 @@ class KeepAliveWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
             if (!SshServerManager.isRunning) {
                 Log.i(TAG, "server down, restarting")
                 applicationContext.startForegroundService(Intent(applicationContext, SshService::class.java))
+            } else {
+                // ตัวหลักยังรัน แต่ sshd ใน Debian ตายเดี่ยว -> ปลุกเฉพาะตัวมัน
+                // (ข้ามถ้ายังไม่เคยติดตั้ง openssh — ปล่อยให้รอบ service start จัดการ)
+                try {
+                    if (GuestManager.isInstalled(applicationContext) &&
+                        prefs.debianSshEnabled && ShellEnv.suAvailable() &&
+                        GuestManager.hasDebianSshd(applicationContext) &&
+                        !GuestManager.debianSshdRunning(applicationContext)
+                    ) {
+                        Log.i(TAG, "debian sshd down, restarting")
+                        SshServerManager.refreshDebianSshd(applicationContext)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "debian keepalive: ${e.message}")
+                }
             }
             Result.success()
         } catch (e: Exception) {

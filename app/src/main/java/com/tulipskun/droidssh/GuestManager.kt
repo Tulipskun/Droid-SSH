@@ -156,6 +156,14 @@ object GuestManager {
     private const val DEBIAN_SSH_PID = "/run/sshd_droid.pid"
     private const val DEBIAN_SSH_CONF = "/etc/ssh/sshd_config_droid"
 
+    /** openssh-server เคยติดตั้งใน guest แล้วหรือยัง (เช็คไฟล์ตรงๆ ไม่ต้อง su) */
+    fun hasDebianSshd(ctx: Context): Boolean =
+        try {
+            File(guestDir(ctx.applicationContext), "usr/sbin/sshd").exists()
+        } catch (_: Exception) {
+            false
+        }
+
     /** sshd ใน guest รันอยู่ไหม (เช็ค pidfile + kill -0) */
     fun debianSshdRunning(ctx: Context): Boolean {
         if (!isInstalled(ctx) || !ShellEnv.suAvailable()) return false
