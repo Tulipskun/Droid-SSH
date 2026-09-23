@@ -154,13 +154,13 @@ object GuestManager {
                     "[ -x \"" + D + "GUEST/droproot\" ] || { echo 'ยังไม่ติดตั้ง guest'; exit 1; }\n" +
                     "su -c \"mkdir -p \\\"" + D + "GUEST" + TERMUX_HOME + "\\\"; chown " + uid + ":" + uid + " \\\"" + D + "GUEST" + TERMUX_HOME + "\\\"\" 2>/dev/null\n" +
                     "exec su -c \"chroot \\\"" + D + "GUEST\\\" /droproot " +
-                    uid + " " + uid + " " + groups + " -- " + TERMUX_BIN + "/usr/bin/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
+                    uid + " " + uid + " " + groups + " -- " + TERMUX_BIN + "/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
             )
             File(bin, "tlogin-root").writeText(
                 "#!/system/bin/sh\n" +
                     "# เข้า Termux guest ในฐานะ root\n" +
                     "GUEST='" + g + "'\n" +
-                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" " + TERMUX_BIN + "/usr/bin/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
+                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" " + TERMUX_BIN + "/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
             )
             chmod(File(bin, "tlogin"))
             chmod(File(bin, "tlogin-root"))
