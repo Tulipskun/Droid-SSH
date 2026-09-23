@@ -3,90 +3,45 @@ package com.tulipskun.droidssh
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
-import android.os.Process
 import android.util.Log
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.zip.ZipInputStream
 
 /**
- * Termux guest (apt/pkg จาก repo จริงของ Termux) รันแบบ chroot + bind mounts
- * ต้องการ root (mount) — เครื่องที่ไม่มี root จะติดตั้งไม่ได้
+ * Debian guest (apt จาก Debian ตรงๆ) รันแบบ chroot + bind mounts — ต้องใช้ root
+ * (mount) เหมือนเดิมทุกอย่าง แค่เปลี่ยน rootfs จาก Termux เป็น Debian
  *
- * สถาปัตย์: rootfs มาจาก release asset (termux-guest-<arch>.zip),
- * login ผ่าน ~/bin/tlogin (droproot ลดสิทธิ์เป็น app user เพื่อให้ apt ทำงาน),
- * ~/bin/tlogin-root สำหรับ root shell เต็ม
+ * เข้าใช้งาน: พิมพ์ `dlogin` ใน SSH (root ใน guest, apt ใช้งานได้ปกติ)
  */
 object GuestManager {
     private const val TAG = "GuestManager"
-    const val GUEST_VERSION = 2
-    private const val RELEASE_TAG = "termux-guest-v1"
+    const val GUEST_VERSION = "debian-1"
+    private const val RELEASE_TAG = "debian-12-guest-v1"
 
-    private val DROPROOT_ASSET = mapOf("arm64-v8a" to "droproot-arm64-v8a")
-    private val GUEST_ZIP = mapOf("arm64-v8a" to "termux-guest-aarch64.zip")
+    private val GUEST_ZIP = mapOf("arm64-v8a" to "debian-12-guest-aarch64.zip")
 
     fun guestDir(ctx: Context): File = File(ctx.applicationContext.filesDir, "guest")
 
     fun supportedAbi(): String? =
-        Build.SUPPORTED_ABIS.firstOrNull { it in DROPROOT_ASSET && it in GUEST_ZIP }
+        Build.SUPPORTED_ABIS.firstOrNull { it in GUEST_ZIP }
 
     fun isInstalled(ctx: Context): Boolean =
         try {
-            File(guestDir(ctx), ".guest-version").readText().trim() == GUEST_VERSION.toString()
+            File(guestDir(ctx), ".guest-version").readText().trim() == GUEST_VERSION
         } catch (_: Exception) {
             false
         }
 
     fun statusText(ctx: Context): String = when {
-        supportedAbi() == null -> "CPU นี้ยังไม่รองรับ Termux guest"
-        isInstalled(ctx) -> "ติดตั้งแล้ว — พิมพ์ tlogin ใน SSH เพื่อเข้า guest (apt/pkg)"
-        else -> "ยังไม่ติดตั้ง (โหลด ~100MB ครั้งเดียว)"
-    }
-
-    /** ไฟล์รันได้ใน guest (unzip ไม่เก็บ permission) — เรียกทุกครั้งที่สตาร์ท */
-    fun ensureExecPerms(ctx: Context) {
-        try {
-            val u = File(guestDir(ctx.applicationContext), "data/data/com.termux/files/usr")
-            for (d in listOf("bin", "libexec", "lib/apt/methods")) {
-                File(u, d).listFiles()?.forEach { chmod(it) }
-            }
-            chmod(File(guestDir(ctx.applicationContext), "droproot"))
-        } catch (e: Exception) {
-            Log.w(TAG, "exec perms: ${e.message}")
-        }
-    }
-
-    /** โฟลเดอร์เปล่าที่ apt/dpkg ต้องใช้ (zip ไม่เก็บโฟลเดอร์เปล่า) — เรียกทุกครั้งที่สตาร์ท */
-    fun ensureGuestDirs(ctx: Context) {
-        try {
-            val g = guestDir(ctx.applicationContext)
-            if (!File(g, ".guest-version").exists()) return
-            // NOTE: path ใต้ usr/ ของ guest (เช่น <guest>/data/data/.../usr/var/...)
-            // ไม่ใช่ <guest>/var ตรงๆ
-            val u = File(g, "data/data/com.termux/files/usr")
-            val dirs = listOf(
-                "var/lib/apt/lists/partial",
-                "var/cache/apt/archives/partial",
-                "var/lib/dpkg/updates",
-                "var/lib/dpkg/info",
-                "var/lib/dpkg/alternatives",
-                "var/log/apt",
-                "etc/apt/apt.conf.d",
-                "etc/apt/sources.list.d",
-                "etc/apt/preferences.d",
-                "tmp",
-            )
-            for (d in dirs) File(u, d).mkdirs()
-            val status = File(u, "var/lib/dpkg/status")
-            if (!status.exists()) status.writeText("")
-            // apt cache ของ Termux อยู่นอก prefix: <guest>/data/data/com.termux/cache/...
-            File(g, "data/data/com.termux/cache/apt/archives/partial").mkdirs()
-        } catch (e: Exception) {
-            Log.w(TAG, "guest dirs: ${e.message}")
-        }
+        supportedAbi() == null -> "CPU นี้ยังไม่รองรับ Debian guest"
+        isInstalled(ctx) -> "ติดตั้งแล้ว — พิมพ์ dlogin ใน SSH เพื่อเข้า Debian (apt)"
+        else -> "ยังไม่ติดตั้ง (โหลด ~65MB ครั้งเดียว)"
     }
 
     /** blocking — เรียกนอก main thread. progress(downloadedBytes, totalBytes; total=-1 ถ้าไม่รู้) */
@@ -94,7 +49,7 @@ object GuestManager {
         val app = ctx.applicationContext
         val abi = supportedAbi() ?: return Result.failure(IllegalStateException("CPU นี้ยังไม่รองรับ"))
         return try {
-            // อัปเกรดเวอร์ชัน: ล้างของเก่าทิ้งก่อน (กันไฟล์ค้างจากเวอร์ชันก่อน)
+            // อัปเกรด/เปลี่ยน guest: ล้างของเก่าทิ้งก่อน
             if (guestDir(app).exists()) guestDir(app).deleteRecursively()
             guestDir(app).mkdirs()
             val url =
@@ -103,13 +58,7 @@ object GuestManager {
             download(url, zip, progress)
             unzip(zip, guestDir(app))
             zip.delete()
-            // droproot: ลดสิทธิ์ root -> app user ใน guest
-            val drop = File(guestDir(app), "droproot")
-            app.assets.open(DROPROOT_ASSET[abi]!!).use { ins ->
-                FileOutputStream(drop).use { ins.copyTo(it) }
-            }
-            chmod(drop)
-            File(guestDir(app), ".guest-version").writeText(GUEST_VERSION.toString())
+            File(guestDir(app), ".guest-version").writeText(GUEST_VERSION)
             ensureGuestDirs(app)
             ensureExecPerms(app)
             writeResolvConf(app)
@@ -118,6 +67,44 @@ object GuestManager {
         } catch (e: Exception) {
             Log.w(TAG, "install: ${e.message}")
             Result.failure(e)
+        }
+    }
+
+    /** โฟลเดอร์ที่ apt/dpkg ต้องใช้ + home ของ root */
+    fun ensureGuestDirs(ctx: Context) {
+        try {
+            val g = guestDir(ctx.applicationContext)
+            if (!File(g, ".guest-version").exists()) return
+            val dirs = listOf(
+                "var/lib/apt/lists/partial",
+                "var/cache/apt/archives/partial",
+                "var/lib/dpkg/updates",
+                "var/lib/dpkg/info",
+                "var/log/apt",
+                "etc/apt/apt.conf.d",
+                "etc/apt/sources.list.d",
+                "etc/apt/preferences.d",
+                "root",
+                "tmp",
+                "home/user",
+            )
+            for (d in dirs) File(g, d).mkdirs()
+            val status = File(g, "var/lib/dpkg/status")
+            if (!status.exists()) status.writeText("")
+        } catch (e: Exception) {
+            Log.w(TAG, "guest dirs: ${e.message}")
+        }
+    }
+
+    /** ไบนารีใน guest ต้อง +x (unzip ไม่เก็บ permission) */
+    fun ensureExecPerms(ctx: Context) {
+        try {
+            val g = guestDir(ctx.applicationContext)
+            for (d in listOf("bin", "sbin", "usr/bin", "usr/sbin", "lib", "lib64")) {
+                File(g, d).listFiles()?.forEach { chmod(it) }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "exec perms: ${e.message}")
         }
     }
 
@@ -168,52 +155,33 @@ object GuestManager {
                 emptyList()
             }
             val servers = if (dns.isEmpty()) listOf("8.8.8.8", "1.1.1.1") else dns
-            // resolv.conf ของ guest อยู่ที่ <guest>/data/.../usr/etc (ไม่ใช่ <guest>/etc)
-            val etc = File(guestDir(app), "data/data/com.termux/files/usr/etc").apply { mkdirs() }
+            // Debian ใช้ /etc มาตรฐาน (ไม่ใช่ prefix แบบ Termux)
+            val etc = File(guestDir(app), "etc").apply { mkdirs() }
             File(etc, "resolv.conf").writeText(servers.joinToString("\n", postfix = "\n") { "nameserver $it" })
         } catch (e: Exception) {
             Log.w(TAG, "resolv: ${e.message}")
         }
     }
 
-    private const val D = "$"
-    private const val TERMUX_BIN = "/data/data/com.termux/files/usr/bin"
-    private const val TERMUX_HOME = "/data/data/com.termux/files/home"
-
     fun writeLoginWrappers(ctx: Context) {
         try {
             val app = ctx.applicationContext
             val g = guestDir(app).absolutePath
-            val uid = Process.myUid()
-            val groups = try {
-                File("/proc/self/status").readLines()
-                    .firstOrNull { it.startsWith("Groups:") }
-                    ?.substringAfter(":")?.trim()?.split(Regex("\\s+"))
-                    ?.filter { it.isNotEmpty() }?.joinToString(",")
-                    .orEmpty().ifEmpty { "$uid" }
-            } catch (_: Exception) {
-                "$uid"
-            }
-            // PATH แบบ Termux จริง (prefix ก่อน) + HOME ของ guest
-            val guestEnv = "HOME=" + TERMUX_HOME + " PATH=" + TERMUX_BIN + ":/system/bin:/system/xbin TERM=" + D + "{TERM:-xterm-256color}"
             val bin = File(ShellEnv.homeDir(app), "bin").apply { mkdirs() }
-            File(bin, "tlogin").writeText(
+            // ลบ wrapper เก่าของ termux guest ทิ้ง (กันสับสน)
+            File(bin, "tlogin").delete()
+            File(bin, "tlogin-root").delete()
+            val d = D
+            File(bin, "dlogin").writeText(
                 "#!/system/bin/sh\n" +
-                    "# เข้า Termux guest (มี apt/pkg) ในฐานะ user ปกติ\n" +
+                    "# เข้า Debian guest (มี apt) ในฐานะ root\n" +
                     "GUEST='" + g + "'\n" +
-                    "[ -x \"" + D + "GUEST/droproot\" ] || { echo 'ยังไม่ติดตั้ง guest'; exit 1; }\n" +
-                    "su -c \"mkdir -p \\\"" + D + "GUEST" + TERMUX_HOME + "\\\"; chown " + uid + ":" + uid + " \\\"" + D + "GUEST" + TERMUX_HOME + "\\\"\" 2>/dev/null\n" +
-                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" /droproot " +
-                    uid + " " + uid + " " + groups + " -- " + TERMUX_BIN + "/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
+                    "exec su -c \"chroot \\\"" + d + "GUEST\\\" " +
+                    "/usr/bin/env HOME=/root " +
+                    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin " +
+                    "TERM=" + d + "{TERM:-xterm-256color} /bin/bash -l\"\n"
             )
-            File(bin, "tlogin-root").writeText(
-                "#!/system/bin/sh\n" +
-                    "# เข้า Termux guest ในฐานะ root\n" +
-                    "GUEST='" + g + "'\n" +
-                    "exec su -c \"chroot \\\"" + D + "GUEST\\\" " + TERMUX_BIN + "/env " + guestEnv + " " + TERMUX_BIN + "/bash -l\"\n"
-            )
-            chmod(File(bin, "tlogin"))
-            chmod(File(bin, "tlogin-root"))
+            chmod(File(bin, "dlogin"))
         } catch (e: Exception) {
             Log.w(TAG, "wrappers: ${e.message}")
         }
@@ -266,9 +234,21 @@ object GuestManager {
                 e = zin.nextEntry
             }
         }
-        // ไฟล์รันได้ใน guest
-        for (d in listOf("data/data/com.termux/files/usr/bin", "data/data/com.termux/files/usr/libexec")) {
-            File(dest, d).listFiles()?.forEach { chmod(it) }
+        // symlink manifest (.droid-links.txt): "t<TAB>path<TAB>target"
+        val man = File(dest, ".droid-links.txt")
+        if (man.exists()) {
+            man.readLines().forEach { line ->
+                val parts = line.split("\t")
+                if (parts.size != 3) return@forEach
+                try {
+                    val link = File(dest, parts[1])
+                    Files.deleteIfExists(link.toPath())
+                    link.parentFile?.mkdirs()
+                    Files.createSymbolicLink(link.toPath(), Paths.get(parts[2]))
+                } catch (_: Exception) {
+                }
+            }
+            man.delete()
         }
     }
 
@@ -278,4 +258,7 @@ object GuestManager {
         } catch (_: Exception) {
         }
     }
+
+    // $ สำหรับเขียน shell script (Kotlin string template ต้อง escape)
+    private const val D = "$"
 }

@@ -181,7 +181,7 @@ class MainActivity : AppCompatActivity() {
         btnGuest.isEnabled = !GuestManager.isInstalled(this) && GuestManager.supportedAbi() != null
     }
 
-    /** ติดตั้ง Termux guest (โหลด ~100MB) — รันนอก main thread พร้อม progress */
+    /** ติดตั้ง Debian guest (โหลด ~65MB) — รันนอก main thread พร้อม progress */
     private fun installGuest() {
         if (!ShellEnv.suAvailable()) {
             snack("guest ต้องใช้ root (mount) — อนุญาตรูทใน KernelSU ก่อน")
@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity() {
                     val mounted = GuestManager.ensureMounts(this)
                     refreshGuest()
                     snack(
-                        if (mounted) "ติดตั้งเสร็จ — พิมพ์ tlogin ใน SSH เพื่อเข้า guest"
+                        if (mounted) "ติดตั้งเสร็จ — พิมพ์ dlogin ใน SSH เพื่อเข้า Debian"
                         else "ติดตั้งเสร็จ แต่ mount ไม่ครบ — ลองกดเปิด SSH ใหม่อีกครั้ง"
                     )
                 }.onFailure { e ->

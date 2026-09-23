@@ -18,13 +18,15 @@
   จึงใช้ `ssh -p 22` ได้เลย (แอป bind port ต่ำกว่า 1024 ตรงๆ ไม่ได้ — เป็นข้อจำกัด Android)
 - สถานะหน้าแอปบอกชัดว่า su พร้อมใช้หรือยังรอ grant
 
-## Termux guest (apt/pkg จาก repo จริงของ Termux) — ต้องใช้ root
+## Debian guest (apt จาก Debian ตรงๆ) — ต้องใช้ root
 
-- กดปุ่ม “ติดตั้ง Termux guest” ในแอป (โหลด ~100MB ครั้งเดียว, เฉพาะ arm64 ตอนนี้)
-- เข้า guest ด้วยคำสั่ง `tlogin` (user ปกติ — `apt`/`pkg` ใช้งานได้) หรือ `tlogin-root` (root เต็ม)
-- ข้างในมี `apt/dpkg/bash/coreutils` ครบ ติดตั้งเพิ่มได้ปกติ เช่น `apt-get install -y htop`
-- เทคนิค: chroot + bind mounts (ไม่ใช้ proot — ทดสอบแล้วใช้ไม่ได้บนเคอร์เนลนี้),
-  ลดสิทธิ์ด้วย `droproot` (uid/gid/groups ของแอป รวมกลุ่ม inet), DNS จากเครื่องจริง
+- กดปุ่ม “ติดตั้ง Debian guest” ในแอป (โหลด ~65MB ครั้งเดียว, เฉพาะ arm64 ตอนนี้)
+- เข้า guest ด้วยคำสั่ง `dlogin` ใน SSH (root ใน guest, `apt` ใช้งานได้ปกติ)
+- ข้างในเป็น Debian bookworm แท้ (glibc) รันแบบ chroot + bind mounts ไม่ใช้ proot
+  (ทดสอบแล้วว่า proot ใช้ไม่ได้บนเคอร์เนลนี้ และ user namespaces โดนปิด)
+- ตัวอย่าง: `apt-get update && apt-get install -y htop`
+- เทคนิค: rootfs สร้างด้วย mmdebstrap, symlink เก็บผ่าน manifest,
+  DNS จากเครื่องจริง, mount ใหม่ให้อัตโนมัติทุกครั้งที่สตาร์ท server
 
 ## Build (GH Action)
 

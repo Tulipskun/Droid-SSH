@@ -203,7 +203,7 @@
 
             <TextView
                 style="@style/SectionHeader"
-                android:text="Termux guest (apt/pkg)" />
+                android:text="Debian guest (apt)" />
 
             <TextView
                 android:id="@+id/tvGuest"
@@ -216,7 +216,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="ติดตั้ง Termux guest" />
+                android:text="ติดตั้ง Debian guest" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
